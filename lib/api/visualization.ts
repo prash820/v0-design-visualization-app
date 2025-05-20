@@ -282,9 +282,9 @@ export async function generateDocumentationAsync({
           }
           \
         }
-        catch (error)
+        catch (parseError)
         {
-          console.error("All JSON parsing attempts failed:", error)
+          console.error("All JSON parsing attempts failed:", parseError)
           console.error("Response that failed to parse:", responseText)
 
           // Create a fallback job ID with a clear prefix to indicate it's a fallback
@@ -797,7 +797,11 @@ export async function getAsyncJobResult(jobId: string): Promise<any> {
 
       // Return a fallback response
       return {
-        content: `# Documentation Error\n\nAn error occurred while retrieving the documentation: ${error.message}\n\nPlease try regenerating the documentation.`,
+        content: `# Documentation Error
+
+An error occurred while retrieving the documentation: ${error.message}
+
+Please try regenerating the documentation.`,
       }
     }
   } catch (error) {
