@@ -120,7 +120,7 @@ importers:
         specifier: ^0.454.0
         version: 0.454.0(react@19.0.0)
       mermaid:
-        specifier: latest
+        specifier: ^11.6.0
         version: 11.6.0
       next:
         specifier: 15.2.4
@@ -162,6 +162,9 @@ importers:
         specifier: ^3.24.1
         version: 3.24.1
     devDependencies:
+      '@types/highlight.js':
+        specifier: ^9.12.4
+        version: 9.12.4
       '@types/node':
         specifier: ^22
         version: 22.0.0
@@ -1207,6 +1210,9 @@ packages:
 
   '@types/geojson@7946.0.16':
     resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
+
+  '@types/highlight.js@9.12.4':
+    resolution: {integrity: sha512-t2szdkwmg2JJyuCM20e8kR2X59WCE5Zkl4bzm1u1Oukjm79zpbiAv+QjnwLnuuV0WHEcX2NgUItu0pAMKuOPww==}
 
   '@types/node@22.0.0':
     resolution: {integrity: sha512-VT7KSYudcPOzP5Q0wfbowyNLaVR8QWUdw+088uFWwfvpY6uCWaXpqV6ieLAu9WBcnTa7H4Z5RLK8I5t2FuOcqw==}
@@ -3355,6 +3361,8 @@ snapshots:
       '@types/d3-zoom': 3.0.8
 
   '@types/geojson@7946.0.16': {}
+
+  '@types/highlight.js@9.12.4': {}
 
   '@types/node@22.0.0':
     dependencies:
