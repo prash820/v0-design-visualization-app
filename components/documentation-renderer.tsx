@@ -6,6 +6,7 @@ import hljs from "highlight.js"
 import "highlight.js/styles/github-dark.css"
 import type { UMLDiagram } from "@/lib/types"
 import { Card } from "@/components/ui/card"
+import puppeteer from "puppeteer"
 
 // Define diagram types more explicitly
 type DiagramType = 'component' | 'data-model' | 'integration' | 'class' | 'sequence' | 'entity' | 'architecture';
