@@ -17,6 +17,10 @@ export interface Project {
     architecture?: string
     [key: string]: string | undefined
   }
+  umlDiagramsSvg?: { [key: string]: string } // <-- Add this line
+  design?: string
+  documentation?: Documentation
+  designDocument?: DesignDocument
 }
 
 export interface UMLDiagram {
@@ -216,4 +220,17 @@ export interface DesignDocument {
       definition: string
     }>
   }
+}
+
+export interface Documentation {
+  id: string
+  projectId: string
+  prompt: string
+  umlDiagrams: any
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  progress: number
+  result?: any
+  error?: string
+  createdAt: string
+  updatedAt: string
 }

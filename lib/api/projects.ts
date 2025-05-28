@@ -16,6 +16,7 @@ export interface ProjectStateUpdate {
   lastPrompt?: string
   lastCode?: string
   diagramType?: string
+  design?: string
 }
 
 export async function getProjects(): Promise<Project[]> {

@@ -22,7 +22,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_BASE_URL}/auth/login`,
     REGISTER: `${API_BASE_URL}/auth/register`,
-    VALIDATE: `${API_BASE_URL}/auth/validate`,
+    VALIDATE: `${API_BASE_URL}/auth/validate-token`,
   },
   // Project endpoints
   PROJECTS: {
@@ -35,10 +35,10 @@ export const API_ENDPOINTS = {
     DIAGRAM: `${API_BASE_URL}/generate`,
     UML: `${API_BASE_URL}/uml/generate`,
     DOCUMENTATION: `${API_BASE_URL}/documentation/generate`,
-    DOCUMENTATION_ASYNC: `${API_BASE_URL}/documentation/generate`, // Updated to match the actual backend route
+    DOCUMENTATION_ASYNC: `${API_BASE_URL}/documentation/generate`,
     HIGH_LEVEL_DOCS: `${API_BASE_URL}/documentation/high-level`,
     LOW_LEVEL_DOCS: `${API_BASE_URL}/documentation/low-level`,
-    // Async status and result endpoints (for documentation)
+    IAC: `${API_BASE_URL}/iac/generate`,
     ASYNC_STATUS: (jobId: string) => `${API_BASE_URL}/documentation/status/${jobId}`,
     ASYNC_RESULT: (jobId: string) => `${API_BASE_URL}/documentation/result/${jobId}`,
   },

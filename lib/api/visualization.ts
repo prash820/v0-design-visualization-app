@@ -234,88 +234,10 @@ export async function generateDocumentationAsync({
             }
           }
 
-          // Third attempt: Try to find a complete JSON object in the response
-          if (!responseData) {
-            const jsonMatch = responseText.match(/(\{.*\})/s)
-            if (jsonMatch && jsonMatch[0]) {
-              try {
-                responseData = JSON.parse(jsonMatch[0])
-                console.log("Successfully extracted and parsed JSON:", responseData)
-              } catch (jsonError) {
-                console.error("Error parsing extracted JSON:", jsonError)
-              }
-            }
-          }
-
-          // Fourth attempt: If first three attempts failed, try to parse the first part of the response
-          if (!responseData) {
-            // Find the position of the first opening brace and the last closing brace
-            const firstBrace = responseText.indexOf("{")
-            const lastBrace = responseText.lastIndexOf("}")
-
-            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-              const jsonSubstring = responseText.substring(firstBrace, lastBrace + 1)
-              try {
-                responseData = JSON.parse(jsonSubstring)
-                console.log("Successfully parsed JSON substring:", responseData)
-              } catch (subError) {
-                console.error("Error parsing JSON substring:", subError)
-              }
-            }
-          }
-
-          // Fifth attempt: If all else fails, try to manually extract the jobId
-          if (!responseData) {
-            const jobIdMatch =
-              responseText.match(/"jobId"\s*:\s*"([^"]+)"/) ||
-              responseText.match(/"id"\s*:\s*"([^"]+)"/) ||
-              responseText.match(/"_id"\s*:\s*"([^"]+)"/)
-            if (jobIdMatch && jobIdMatch[1]) {
-              console.log("Manually extracted jobId:", jobIdMatch[1])
-              return { jobId: jobIdMatch[1] }
-            }
-          }
-
           // If we still don't have valid data, throw an error
           if (!responseData) {
             throw new Error("Failed to parse API response as JSON")
           }
-          \
-        }
-        catch (parseError)
-        {
-          console.error("All JSON parsing attempts failed:", parseError)
-          console.error("Response that failed to parse:", responseText)
-
-          // Create a fallback job ID with a clear prefix to indicate it's a fallback
-          const fallbackJobId = `fallback-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
-          console.log("Created fallback jobId:", fallbackJobId)
-
-          // Store the mock job in localStorage to simulate async behavior
-          if (typeof window !== "undefined") {
-            localStorage.setItem(
-              `mock-job-${fallbackJobId}`,
-              JSON.stringify({
-                status: "pending",
-                createdAt: Date.now(),
-              }),
-            )
-
-            // Simulate async processing
-            setTimeout(() => {
-              const mockDoc = generateMockDocumentation(prompt || "System Documentation", projectId)
-              localStorage.setItem(
-                `mock-job-${fallbackJobId}`,
-                JSON.stringify({
-                  status: "completed",
-                  result: mockDoc,
-                  completedAt: Date.now(),
-                }),
-              )
-            }, 3000)
-          }
-
-          return { jobId: fallbackJobId }
         }
 
         // Check if the response has the expected format with jobId
@@ -544,8 +466,8 @@ ${mockDoc.content.split("\n").slice(2).join("\n")}
   return { jobId: offlineJobId }
 }
 
-// Update the checkAsyncJobStatus function to use the correct endpoint
-export async function checkAsyncJobStatus(jobId: string): Promise<AsyncJobResponse> {
+// Update the checkAsyncJobStatus function to accept projectId
+export async function checkAsyncJobStatus(jobId: string, projectId?: string): Promise<AsyncJobResponse> {
   try {
     // Check if this is a mock job (including fallback, recovery, and offline jobs)
     if (
@@ -565,139 +487,78 @@ export async function checkAsyncJobStatus(jobId: string): Promise<AsyncJobRespon
           result: parsedData.result,
         }
       }
-
-      // If we don't have data for this mock job yet, return a default processing status
       return {
         jobId,
         status: "processing",
         progress: 50,
       }
     }
-
-    // Check if we're offline
     if (isOffline()) {
-      console.log("Device is offline, using offline status for job:", jobId)
       return {
         jobId,
         status: "processing",
         progress: 70,
       }
     }
-
-    // Otherwise, try the real API
-    try {
-      const response = await fetch(API_ENDPOINTS.GENERATE.ASYNC_STATUS(jobId), {
-        headers: {
-          // Add authorization header if available
-          ...(typeof localStorage !== "undefined" && localStorage.getItem("token")
-            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
-            : {}),
-        },
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`Error checking job status for ${jobId}:`, errorText)
-
-        // If we get a 404, the job might not exist or might have been removed
-        if (response.status === 404) {
-          console.log(`Job ${jobId} not found, creating a mock job as fallback`)
-
-          // Create a mock job as fallback
-          if (typeof window !== "undefined") {
+    // Use projectId as query param
+    const url = projectId
+      ? `${API_ENDPOINTS.GENERATE.ASYNC_STATUS(jobId)}?projectId=${encodeURIComponent(projectId)}`
+      : API_ENDPOINTS.GENERATE.ASYNC_STATUS(jobId)
+    const response = await fetch(url, {
+      headers: {
+        ...(typeof localStorage !== "undefined" && localStorage.getItem("token")
+          ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          : {}),
+      },
+    })
+    if (!response.ok) {
+      const errorText = await response.text()
+      if (response.status === 404) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(
+            `mock-job-${jobId}`,
+            JSON.stringify({ status: "processing", createdAt: Date.now() })
+          )
+          setTimeout(() => {
             localStorage.setItem(
               `mock-job-${jobId}`,
               JSON.stringify({
-                status: "processing",
-                createdAt: Date.now(),
-              }),
+                status: "completed",
+                result: {
+                  content: `# Documentation Recovery\n\nThe original documentation job could not be found. This is a fallback documentation.`,
+                },
+                completedAt: Date.now(),
+              })
             )
-
-            // Complete the mock job after a delay
-            setTimeout(() => {
-              localStorage.setItem(
-                `mock-job-${jobId}`,
-                JSON.stringify({
-                  status: "completed",
-                  result: {
-                    content: `# Documentation Recovery\n\nThe original documentation job could not be found. This is a fallback documentation.`,
-                  },
-                  completedAt: Date.now(),
-                }),
-              )
-            }, 3000)
-          }
-
-          return {
-            jobId,
-            status: "processing",
-            progress: 50,
-          }
+          }, 3000)
         }
-
-        throw new Error(`API returned ${response.status}: ${errorText}`)
+        return { jobId, status: "processing", progress: 50 }
       }
-
-      // Parse the response as JSON
-      const responseData = await response.json()
-      console.log(`Status response for job ${jobId}:`, responseData)
-
-      // Validate the response format based on the API documentation
-      if (!responseData.jobId && !responseData.id && !responseData._id) {
-        console.warn("Response missing jobId, using provided jobId:", jobId)
-        responseData.jobId = jobId
+      throw new Error(`API returned ${response.status}: ${errorText}`)
+    }
+    const responseData = await response.json()
+    if (!responseData.jobId && !responseData.id && !responseData._id) {
+      responseData.jobId = jobId
+    } else {
+      responseData.jobId = responseData.jobId || responseData.id || responseData._id
+    }
+    if (!responseData.status) {
+      responseData.status = "processing"
+    }
+    if (!["pending", "processing", "completed", "failed"].includes(responseData.status)) {
+      responseData.status = "processing"
+    }
+    if (responseData.progress === undefined) {
+      if (responseData.status === "completed") {
+        responseData.progress = 100
+      } else if (responseData.status === "failed") {
+        responseData.progress = 0
       } else {
-        // Use the first available ID field
-        responseData.jobId = responseData.jobId || responseData.id || responseData._id
-      }
-
-      if (!responseData.status) {
-        console.warn("Response missing status, defaulting to 'processing'")
-        responseData.status = "processing"
-      }
-
-      // Ensure the status is one of the expected values
-      if (!["pending", "processing", "completed", "failed"].includes(responseData.status)) {
-        console.warn(`Unexpected status value: ${responseData.status}, defaulting to "processing"`)
-        responseData.status = "processing"
-      }
-
-      // Ensure we have a progress value
-      if (responseData.progress === undefined) {
-        if (responseData.status === "completed") {
-          responseData.progress = 100
-        } else if (responseData.status === "failed") {
-          responseData.progress = 0
-        } else {
-          responseData.progress = 50 // Default to 50% for processing
-        }
-      }
-
-      return responseData
-    } catch (error) {
-      console.error(`Error checking job status for ${jobId}:`, error)
-
-      // Check if it's a network error
-      if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
-        console.log("Network error when checking job status, using offline mode")
-        return {
-          jobId,
-          status: "processing",
-          progress: 65, // Different progress to show some movement
-        }
-      }
-
-      // Create a fallback response
-      return {
-        jobId,
-        status: "processing",
-        progress: 50,
+        responseData.progress = 50
       }
     }
+    return responseData
   } catch (error) {
-    console.error(`Error checking job status for ${jobId}:`, error)
-
-    // Return a safe fallback
     return {
       jobId,
       status: "processing",
@@ -784,7 +645,7 @@ export async function getAsyncJobResult(jobId: string): Promise<any> {
 
       // If the response doesn't have the expected format, return it as is
       return responseData
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error getting job result for ${jobId}:`, error)
 
       // Check if it's a network error
@@ -799,7 +660,7 @@ export async function getAsyncJobResult(jobId: string): Promise<any> {
       return {
         content: `# Documentation Error
 
-An error occurred while retrieving the documentation: ${error.message}
+An error occurred while retrieving the documentation: ${error instanceof Error ? error.message : String(error)}
 
 Please try regenerating the documentation.`,
       }

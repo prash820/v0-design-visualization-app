@@ -61,7 +61,7 @@ export async function validateToken(): Promise<boolean> {
       return false
     }
 
-    await apiClient.post<{ valid: boolean }>(API_ENDPOINTS.AUTH.VALIDATE, {})
+    await apiClient.get<{ valid: boolean }>(API_ENDPOINTS.AUTH.VALIDATE)
 
     return true
   } catch (error) {
