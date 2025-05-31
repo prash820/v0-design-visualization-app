@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import DocumentationRenderer from "./documentation-renderer"
+import html2pdf from "html2pdf.js"
 
 interface DocumentationWithTOCProps {
   content: string
@@ -72,6 +73,23 @@ export default function DocumentationWithTOC({ content, diagrams = [] }: Documen
     return `${hashes} <span id="${id}"></span>${title}`
   })
 
+  // PDF Export function
+  const exportPDF = () => {
+    const element = document.getElementById('fullDocument');
+    if (element) {
+      html2pdf()
+        .set({
+          margin: 10,
+          filename: 'MyDocumentation.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        })
+        .from(element)
+        .save();
+    }
+  };
+
   return (
     <div className="flex w-full">
       {/* TOC Sidebar (only when not collapsed) */}
@@ -116,8 +134,18 @@ export default function DocumentationWithTOC({ content, diagrams = [] }: Documen
         </div>
       )}
       {/* Main Content */}
-      <div ref={containerRef} className="flex-1 min-w-0">
-        <DocumentationRenderer content={contentWithAnchors} diagrams={diagrams} />
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-end mb-4">
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={exportPDF}
+          >
+            Export as PDF
+          </button>
+        </div>
+        <div id="fullDocument">
+          <DocumentationRenderer content={contentWithAnchors} diagrams={diagrams} />
+        </div>
       </div>
     </div>
   )

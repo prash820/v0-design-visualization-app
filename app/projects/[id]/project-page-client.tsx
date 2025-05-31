@@ -824,35 +824,44 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
   // Helper to extract diagrams from project or documentation
   function extractDiagrams(source: any): any[] {
-    console.log('[extractDiagrams] source:', source);
-    console.log('[extractDiagrams] source.umlDiagramsSvg:', source?.umlDiagramsSvg);
     const umlDiagrams = source?.umlDiagrams || {};
-    const umlDiagramsSvg = source?.umlDiagramsSvg || {};
-    console.log("[extractDiagrams] umlDiagramsSvg:", umlDiagramsSvg);
     return Object.entries(umlDiagrams).map(([key, value]) => {
       let type;
       if (key.toLowerCase().includes("class")) type = "class";
       else if (key.toLowerCase().includes("sequence")) type = "sequence";
-      else if (key.toLowerCase().includes("entity")) type = "entity";
+      else if (key.toLowerCase().includes("entity") || key.toLowerCase().includes("erd")) type = "entity";
       else if (key.toLowerCase().includes("component")) type = "component";
-      else if (key.toLowerCase().includes("architecture")) type = "architecture";
-      else if (key.toLowerCase().includes("data")) type = "data-model";
+      else if (key.toLowerCase().includes("architecture")) type = "component"; // Map architecture to component
+      else if (key.toLowerCase().includes("data")) type = "entity"; // Map data to entity
       else if (key.toLowerCase().includes("integration")) type = "integration";
       if (!type) return null;
-      // Try both keyDiagram and key for SVG lookup
-      const svg = umlDiagramsSvg[`${key}Diagram`] || umlDiagramsSvg[key];
-      if (svg) {
-        console.log(`[extractDiagrams] SVG for ${key}:`, svg.substring(0, 200) + (svg.length > 200 ? '...' : ''));
-      } else {
-        console.log(`[extractDiagrams] No SVG for ${key}`);
-      }
       return {
         type,
-        svg,
-        mermaid: value
+        mermaid: value,
+        title: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim() + ' Diagram'
       };
     }).filter(Boolean);
   }
+
+  useEffect(() => {
+    if (project && projectDiagrams.length > 0) {
+      // Build a new umlDiagrams object from projectDiagrams
+      const umlDiagrams: Record<string, string> = {};
+      projectDiagrams.forEach((diagram) => {
+        if (diagram.diagramData) {
+          let key = "";
+          if (diagram.diagramType.toLowerCase().includes("class")) key = "class";
+          else if (diagram.diagramType.toLowerCase().includes("sequence")) key = "sequence";
+          else if (diagram.diagramType.toLowerCase().includes("entity")) key = "entity";
+          else if (diagram.diagramType.toLowerCase().includes("component")) key = "component";
+          else if (diagram.diagramType.toLowerCase().includes("architecture")) key = "architecture";
+          if (key) umlDiagrams[key] = diagram.diagramData;
+        }
+      });
+      setProject({ ...project, umlDiagrams });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectDiagrams]);
 
   if (!isAuthenticated || isLoading) {
     return (
@@ -1041,7 +1050,6 @@ export default function ProjectPageClient({ id }: { id: string }) {
                   {(() => {
                     // Log for debugging
                     console.log("[Documentation Render] documentation:", documentation)
-                    console.log("[Documentation Render] project.documentation:", project && project.documentation && project.umlDiagramsSvg)
 
                     // Helper to extract markdown string
                     function extractMarkdown(doc: any) {

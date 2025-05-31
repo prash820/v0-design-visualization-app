@@ -17,7 +17,6 @@ export interface Project {
     architecture?: string
     [key: string]: string | undefined
   }
-  umlDiagramsSvg?: { [key: string]: string } // <-- Add this line
   design?: string
   documentation?: Documentation
   designDocument?: DesignDocument
