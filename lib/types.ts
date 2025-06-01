@@ -233,3 +233,20 @@ export interface Documentation {
   createdAt: string
   updatedAt: string
 }
+
+export interface GenerateIaCRequest {
+  prompt: string;
+  projectId: string;
+  umlDiagrams: Record<string, string>;
+}
+
+export interface GenerateIaCResponse {
+  code: string;
+  documentation: string;
+}
+
+export interface ProjectStateUpdate {
+  lastPrompt?: string;
+  lastCode?: string;
+  design?: string;
+}

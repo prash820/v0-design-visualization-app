@@ -38,7 +38,7 @@ export const API_ENDPOINTS = {
     DOCUMENTATION_ASYNC: `${API_BASE_URL}/documentation/generate`,
     HIGH_LEVEL_DOCS: `${API_BASE_URL}/documentation/high-level`,
     LOW_LEVEL_DOCS: `${API_BASE_URL}/documentation/low-level`,
-    IAC: `${API_BASE_URL}/iac/generate`,
+    IAC: `${API_BASE_URL}/iac`,
     ASYNC_STATUS: (jobId: string) => `${API_BASE_URL}/documentation/status/${jobId}`,
     ASYNC_RESULT: (jobId: string) => `${API_BASE_URL}/documentation/result/${jobId}`,
   },

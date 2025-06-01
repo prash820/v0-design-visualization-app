@@ -20,6 +20,8 @@ export interface GenerateDocumentationRequest {
 
 export interface GenerateIaCRequest {
   prompt: string
+  projectId: string
+  umlDiagrams: Record<string, string>
 }
 
 export interface DeployRequest {
@@ -33,6 +35,11 @@ export interface AsyncJobResponse {
   result?: any
   error?: string
   progress?: number
+}
+
+export interface GenerateIaCResponse {
+  code: string
+  documentation: string
 }
 
 // Maximum number of retries for network requests
@@ -1048,16 +1055,17 @@ export async function generateLowLevelDocumentation({
 }
 
 // Generate Infrastructure as Code
-export async function generateIaC({ prompt }: GenerateIaCRequest): Promise<{ code: string }> {
+export const generateIaC = async (request: GenerateIaCRequest): Promise<GenerateIaCResponse> => {
   try {
-    return await apiClient.post<{ code: string }>(API_ENDPOINTS.GENERATE.IAC, {
-      prompt,
-    })
+    console.log("Generating IaC with request:", request);
+    const response = await apiClient.post<GenerateIaCResponse>(API_ENDPOINTS.GENERATE.IAC, request);
+    console.log("IaC generation response:", response);
+    return response;
   } catch (error) {
-    console.error("Error generating infrastructure code:", error)
-    throw error instanceof ApiError ? error : new ApiError("Failed to generate infrastructure code", 500)
+    console.error("Error generating IaC:", error);
+    throw error instanceof ApiError ? error : new ApiError("Failed to generate IaC", 500);
   }
-}
+};
 
 // Deploy infrastructure
 export async function deployInfrastructure({ code, projectId }: DeployRequest): Promise<{ status: string }> {

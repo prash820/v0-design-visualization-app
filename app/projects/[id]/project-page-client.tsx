@@ -640,83 +640,73 @@ export default function ProjectPageClient({ id }: { id: string }) {
   }
 
   const handleGenerateIaC = async () => {
-    if (!prompt.trim()) {
-      toast({
-        title: "Empty prompt",
-        description: "Please enter a prompt to generate infrastructure code.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsGenerating(true)
-    setActiveTab("infrastructure")
-
     try {
-      // Get the project ID
-      const projectId = project?.id
-
-      // Ensure we have a valid project ID
-      if (!projectId) {
-        throw new Error("Invalid project ID")
+      console.log("Starting infrastructure generation process");
+      
+      if (!prompt) {
+        toast({
+          title: "Error",
+          description: "Please enter a prompt for infrastructure generation",
+          variant: "destructive",
+        });
+        return;
       }
 
-      // Try to save the prompt to the project state, but continue even if it fails
-      try {
-        await updateProjectState(projectId, { lastPrompt: prompt })
-        console.log("Successfully updated project state with prompt")
-      } catch (stateError) {
-        // Log the error but continue with infrastructure generation
-        console.error("Failed to update project state, continuing with infrastructure generation:", stateError)
-        // Don't show a toast for this error since it's not critical
+      console.log("Prompt:", prompt);
+      console.log("Project ID:", id);
+
+      // Get all UML diagrams from the project
+      const umlDiagrams: Record<string, string> = {};
+      if (project?.umlDiagrams) {
+        Object.entries(project.umlDiagrams).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            umlDiagrams[key] = value;
+          }
+        });
       }
 
-      // Generate infrastructure code
-      const response = await generateIaC({ prompt })
-      setTerraformConfig(response.code)
+      console.log("Processing project diagrams:", umlDiagrams);
 
-      // Try to update project state with the generated code, but don't fail if it doesn't work
-      try {
-        await updateProjectState(projectId, { lastCode: response.code })
-        console.log("Successfully updated project state with generated code")
-      } catch (stateError) {
-        // Log the error but don't fail the overall operation
-        console.error("Failed to update project state with generated code:", stateError)
+      // Generate IaC
+      const response = await generateIaC({
+        prompt,
+        projectId: id,
+        umlDiagrams,
+      });
+
+      console.log("IaC generation response:", response);
+
+      if (!response.code) {
+        throw new Error("No code generated in the response");
+      }
+
+      // Update project state with the generated code
+      await updateProjectState(id, {
+        lastPrompt: prompt,
+        lastCode: response.code,
+        design: response.documentation || "",
+      });
+
+      // Update the UI
+      setTerraformConfig(response.code);
+      if (response.documentation) {
+        setDocumentation(response.documentation);
       }
 
       toast({
-        title: "Infrastructure code generated",
-        description: "Your Terraform configuration has been generated successfully.",
-      })
+        title: "Success",
+        description: "Infrastructure code generated successfully",
+        variant: "default",
+      });
     } catch (error) {
-      console.error("Error generating infrastructure code:", error)
-
-      // Check if it's a network error
-      const isNetworkError =
-        error instanceof ApiError &&
-        (error.message.includes("Network error") || error.message.includes("Failed to fetch"))
-
-      if (isNetworkError) {
-        setIsOffline(true)
-        toast({
-          title: "Network error",
-          description: "Unable to connect to the server. Please check your internet connection.",
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Error generating infrastructure code",
-          description:
-            error instanceof ApiError
-              ? error.message
-              : "There was an error generating your infrastructure code. Please try again.",
-          variant: "destructive",
-        })
-      }
-    } finally {
-      setIsGenerating(false)
+      console.error("Error in handleGenerateIaC:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate infrastructure code",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   // Render the async generation status
   const renderAsyncStatus = () => {
