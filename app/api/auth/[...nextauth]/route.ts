@@ -87,4 +87,4 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }
 
-// TODO: Replace the placeholder client IDs and secrets with real values in your .env file. 
+// TODO: Replace the placeholder client IDs and secrets with real values in your .env file.

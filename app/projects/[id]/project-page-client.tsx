@@ -53,6 +53,10 @@ export default function ProjectPageClient({ id }: { id: string }) {
   const router = useRouter()
   const { toast } = useToast()
 
+  const [isGeneratingIaC, setIsGeneratingIaC] = useState(false)
+  const [iacProgress, setIacProgress] = useState(0)
+  const [iacStatus, setIacStatus] = useState<string | null>(null)
+
   // Define diagram types
   const diagramTypes = [
     { id: "class", name: "Class Diagram" },
@@ -180,7 +184,9 @@ export default function ProjectPageClient({ id }: { id: string }) {
             diagramsArray.push({
               id: `diagram-${projectData.id}-${key}-${Date.now()}`,
               projectId: projectData.id,
-              diagramType: DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] || `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
+              diagramType:
+                DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] ||
+                `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
               diagramData: value,
               prompt: projectData.lastPrompt || "",
               createdAt: timestamp,
@@ -267,7 +273,9 @@ export default function ProjectPageClient({ id }: { id: string }) {
         diagramsArray.push({
           id: `diagram-${projectId}-${key}-${Date.now()}`,
           projectId: projectId,
-          diagramType: DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] || `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
+          diagramType:
+            DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] ||
+            `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
           diagramData: value as string,
           prompt: currentPrompt,
           createdAt: response.createdAt || timestamp,
@@ -289,7 +297,9 @@ export default function ProjectPageClient({ id }: { id: string }) {
         diagramsArray.push({
           id: `diagram-${projectId}-${key}-${Date.now()}`,
           projectId: projectId,
-          diagramType: DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] || `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
+          diagramType:
+            DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] ||
+            `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
           diagramData: value as string,
           prompt: currentPrompt,
           createdAt: timestamp,
@@ -641,72 +651,109 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
   const handleGenerateIaC = async () => {
     try {
-      console.log("Starting infrastructure generation process");
-      
+      console.log("Starting infrastructure generation process")
+
       if (!prompt) {
         toast({
           title: "Error",
           description: "Please enter a prompt for infrastructure generation",
           variant: "destructive",
-        });
-        return;
+        })
+        return
       }
 
-      console.log("Prompt:", prompt);
-      console.log("Project ID:", id);
+      // Set loading state and switch to infrastructure tab
+      setIsGeneratingIaC(true)
+      setIacProgress(0)
+      setIacStatus("initializing")
+      setActiveTab("infrastructure")
+
+      console.log("Prompt:", prompt)
+      console.log("Project ID:", id)
+
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setIacProgress((prev) => {
+          if (prev < 80) return prev + 10
+          return prev
+        })
+      }, 500)
 
       // Get all UML diagrams from the project
-      const umlDiagrams: Record<string, string> = {};
+      const umlDiagrams: Record<string, string> = {}
       if (project?.umlDiagrams) {
         Object.entries(project.umlDiagrams).forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            umlDiagrams[key] = value;
+          if (typeof value === "string") {
+            umlDiagrams[key] = value
           }
-        });
+        })
       }
 
-      console.log("Processing project diagrams:", umlDiagrams);
+      console.log("Processing project diagrams:", umlDiagrams)
+
+      // Update status
+      setIacStatus("generating")
 
       // Generate IaC
       const response = await generateIaC({
         prompt,
         projectId: id,
         umlDiagrams,
-      });
+      })
 
-      console.log("IaC generation response:", response);
+      console.log("IaC generation response:", response)
 
       if (!response.code) {
-        throw new Error("No code generated in the response");
+        throw new Error("No code generated in the response")
       }
+
+      // Update status and progress
+      setIacStatus("saving")
+      setIacProgress(90)
 
       // Update project state with the generated code
       await updateProjectState(id, {
         lastPrompt: prompt,
         lastCode: response.code,
         design: response.documentation || "",
-      });
+      })
+
+      // Complete progress
+      setIacProgress(100)
+      setIacStatus("completed")
+
+      // Clear progress interval
+      clearInterval(progressInterval)
 
       // Update the UI
-      setTerraformConfig(response.code);
+      setTerraformConfig(response.code)
       if (response.documentation) {
-        setDocumentation(response.documentation);
+        setDocumentation(response.documentation)
       }
 
       toast({
         title: "Success",
         description: "Infrastructure code generated successfully",
         variant: "default",
-      });
+      })
+
+      // Reset status after a delay
+      setTimeout(() => {
+        setIacStatus(null)
+        setIacProgress(0)
+      }, 2000)
     } catch (error) {
-      console.error("Error in handleGenerateIaC:", error);
+      console.error("Error in handleGenerateIaC:", error)
+      setIacStatus("failed")
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to generate infrastructure code",
         variant: "destructive",
-      });
+      })
+    } finally {
+      setIsGeneratingIaC(false)
     }
-  };
+  }
 
   // Render the async generation status
   const renderAsyncStatus = () => {
@@ -752,106 +799,167 @@ export default function ProjectPageClient({ id }: { id: string }) {
     )
   }
 
+  // Render the IaC generation status
+  const renderIaCStatus = () => {
+    if (!iacStatus) return null
+
+    let statusText = ""
+    let statusColor = ""
+
+    switch (iacStatus) {
+      case "initializing":
+        statusText = "Initializing infrastructure generation..."
+        statusColor = "text-blue-600 dark:text-blue-400"
+        break
+      case "generating":
+        statusText = "Generating Terraform configuration... This may take a moment."
+        statusColor = "text-blue-600 dark:text-blue-400"
+        break
+      case "saving":
+        statusText = "Saving infrastructure code..."
+        statusColor = "text-blue-600 dark:text-blue-400"
+        break
+      case "completed":
+        statusText = "Infrastructure code generated successfully!"
+        statusColor = "text-green-600 dark:text-green-400"
+        break
+      case "failed":
+        statusText = "Failed to generate infrastructure code. Please try again."
+        statusColor = "text-red-600 dark:text-red-400"
+        break
+      default:
+        statusText = "Processing..."
+        statusColor = "text-blue-600 dark:text-blue-400"
+    }
+
+    return (
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
+        <div className="flex items-center mb-2">
+          {iacStatus === "failed" ? (
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+          ) : iacStatus === "completed" ? (
+            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+          ) : (
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          )}
+          <p className={`text-sm font-medium ${statusColor}`}>{statusText}</p>
+        </div>
+        {iacStatus !== "failed" && iacStatus !== "completed" && <Progress value={iacProgress} className="h-2 mt-2" />}
+      </div>
+    )
+  }
+
   useEffect(() => {
-    let pollingInterval: NodeJS.Timeout | null = null;
+    let pollingInterval: NodeJS.Timeout | null = null
 
     const pollStatus = async () => {
-      if (!asyncDocJobId) return;
+      if (!asyncDocJobId) return
       try {
-        const statusResp = await import("@/lib/api/visualization").then(m => m.checkAsyncJobStatus(asyncDocJobId, id));
-        setAsyncStatus(statusResp.status);
-        setAsyncProgress(statusResp.progress ?? 0);
+        const statusResp = await import("@/lib/api/visualization").then((m) => m.checkAsyncJobStatus(asyncDocJobId, id))
+        setAsyncStatus(statusResp.status)
+        setAsyncProgress(statusResp.progress ?? 0)
         // Print status response for debugging
-        console.log("[Doc Poll] Status response:", statusResp);
+        console.log("[Doc Poll] Status response:", statusResp)
         if (statusResp.status === "completed") {
           // Use the result directly from the status response
           if (statusResp.result) {
             if (typeof statusResp.result === "string") {
-              setDocumentation(statusResp.result);
+              setDocumentation(statusResp.result)
             } else if (statusResp.result.content) {
-              setDocumentation(statusResp.result.content);
+              setDocumentation(statusResp.result.content)
             } else {
-              setDocumentation(JSON.stringify(statusResp.result, null, 2));
+              setDocumentation(JSON.stringify(statusResp.result, null, 2))
             }
           } else {
-            setDocumentation("Documentation generated, but could not parse content.");
+            setDocumentation("Documentation generated, but could not parse content.")
           }
-          setIsGeneratingDocs(false);
-          setAsyncStatus("completed");
-          setAsyncProgress(100);
-          setAsyncDocJobId(null); // Stop polling
+          setIsGeneratingDocs(false)
+          setAsyncStatus("completed")
+          setAsyncProgress(100)
+          setAsyncDocJobId(null) // Stop polling
           // Optionally, reload the project to get the latest documentations
-          loadProject();
+          loadProject()
         } else if (statusResp.status === "failed") {
-          setIsGeneratingDocs(false);
-          setAsyncStatus("failed");
-          setAsyncProgress(0);
-          setAsyncDocJobId(null); // Stop polling
+          setIsGeneratingDocs(false)
+          setAsyncStatus("failed")
+          setAsyncProgress(0)
+          setAsyncDocJobId(null) // Stop polling
           if (statusResp.error) {
-            setError(statusResp.error);
+            setError(statusResp.error)
           }
         }
       } catch (err) {
-        console.error("[Doc Poll] Error polling documentation status:", err);
-        setIsGeneratingDocs(false);
-        setAsyncStatus("failed");
-        setAsyncProgress(0);
-        setAsyncDocJobId(null);
-        setError("Failed to poll documentation status. Please try again.");
+        console.error("[Doc Poll] Error polling documentation status:", err)
+        setIsGeneratingDocs(false)
+        setAsyncStatus("failed")
+        setAsyncProgress(0)
+        setAsyncDocJobId(null)
+        setError("Failed to poll documentation status. Please try again.")
       }
-    };
+    }
 
     if (asyncDocJobId && (asyncStatus === "pending" || asyncStatus === "processing")) {
-      pollStatus(); // Immediate first poll
-      pollingInterval = setInterval(pollStatus, 3000);
+      pollStatus() // Immediate first poll
+      pollingInterval = setInterval(pollStatus, 3000)
     }
 
     return () => {
-      if (pollingInterval) clearInterval(pollingInterval);
-    };
+      if (pollingInterval) clearInterval(pollingInterval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asyncDocJobId]);
+  }, [asyncDocJobId])
 
   // Helper to extract diagrams from project or documentation
   function extractDiagrams(source: any): any[] {
-    const umlDiagrams = source?.umlDiagrams || {};
-    return Object.entries(umlDiagrams).map(([key, value]) => {
-      let type;
-      if (key.toLowerCase().includes("class")) type = "class";
-      else if (key.toLowerCase().includes("sequence")) type = "sequence";
-      else if (key.toLowerCase().includes("entity") || key.toLowerCase().includes("erd")) type = "entity";
-      else if (key.toLowerCase().includes("component")) type = "component";
-      else if (key.toLowerCase().includes("architecture")) type = "component"; // Map architecture to component
-      else if (key.toLowerCase().includes("data")) type = "entity"; // Map data to entity
-      else if (key.toLowerCase().includes("integration")) type = "integration";
-      if (!type) return null;
-      return {
-        type,
-        mermaid: value,
-        title: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim() + ' Diagram'
-      };
-    }).filter(Boolean);
+    const umlDiagrams = source?.umlDiagrams || {}
+    return Object.entries(umlDiagrams)
+      .map(([key, value]) => {
+        let type
+        if (key.toLowerCase().includes("class")) type = "class"
+        else if (key.toLowerCase().includes("sequence")) type = "sequence"
+        else if (key.toLowerCase().includes("entity") || key.toLowerCase().includes("erd")) type = "entity"
+        else if (key.toLowerCase().includes("component")) type = "component"
+        else if (key.toLowerCase().includes("architecture"))
+          type = "component" // Map architecture to component
+        else if (key.toLowerCase().includes("data"))
+          type = "entity" // Map data to entity
+        else if (key.toLowerCase().includes("integration")) type = "integration"
+        if (!type) return null
+        return {
+          type,
+          mermaid: value,
+          title:
+            key.charAt(0).toUpperCase() +
+            key
+              .slice(1)
+              .replace(/([A-Z])/g, " $1")
+              .trim() +
+            " Diagram",
+        }
+      })
+      .filter(Boolean)
   }
 
   useEffect(() => {
     if (project && projectDiagrams.length > 0) {
-      // Build a new umlDiagrams object from projectDiagrams
-      const umlDiagrams: Record<string, string> = {};
+      // Build a new umlDiagrams object from
+      projectDiagrams
+      const umlDiagrams: Record<string, string> = {}
       projectDiagrams.forEach((diagram) => {
         if (diagram.diagramData) {
-          let key = "";
-          if (diagram.diagramType.toLowerCase().includes("class")) key = "class";
-          else if (diagram.diagramType.toLowerCase().includes("sequence")) key = "sequence";
-          else if (diagram.diagramType.toLowerCase().includes("entity")) key = "entity";
-          else if (diagram.diagramType.toLowerCase().includes("component")) key = "component";
-          else if (diagram.diagramType.toLowerCase().includes("architecture")) key = "architecture";
-          if (key) umlDiagrams[key] = diagram.diagramData;
+          let key = ""
+          if (diagram.diagramType.toLowerCase().includes("class")) key = "class"
+          else if (diagram.diagramType.toLowerCase().includes("sequence")) key = "sequence"
+          else if (diagram.diagramType.toLowerCase().includes("entity")) key = "entity"
+          else if (diagram.diagramType.toLowerCase().includes("component")) key = "component"
+          else if (diagram.diagramType.toLowerCase().includes("architecture")) key = "architecture"
+          if (key) umlDiagrams[key] = diagram.diagramData
         }
-      });
-      setProject({ ...project, umlDiagrams });
+      })
+      setProject({ ...project, umlDiagrams })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectDiagrams]);
+  }, [projectDiagrams])
 
   if (!isAuthenticated || isLoading) {
     return (
@@ -963,8 +1071,13 @@ export default function ProjectPageClient({ id }: { id: string }) {
                     </>
                   )}
                 </Button>
-                <Button onClick={handleGenerateIaC} disabled={isGenerating} variant="outline" className="w-full">
-                  {isGenerating && activeTab === "infrastructure" ? (
+                <Button
+                  onClick={handleGenerateIaC}
+                  disabled={isGeneratingIaC || isGenerating}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isGeneratingIaC ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Generating Infrastructure...
@@ -1052,7 +1165,9 @@ export default function ProjectPageClient({ id }: { id: string }) {
                     }
 
                     // Prefer the documentation from project.documentation
-                    const docString = extractMarkdown(documentation) || extractMarkdown(project && project.documentation && project.documentation.result)
+                    const docString =
+                      extractMarkdown(documentation) ||
+                      extractMarkdown(project && project.documentation && project.documentation.result)
 
                     if (isGeneratingDocs) {
                       return (
@@ -1067,8 +1182,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
                       )
                     } else if (docString && docString.trim() !== "") {
                       // Prefer documentation object, then project, then documentation variable
-                      const docSource = project;
-                      const diagrams = extractDiagrams(docSource);
+                      const docSource = project
+                      const diagrams = extractDiagrams(docSource)
                       return <DocumentationWithTOC content={docString} diagrams={diagrams} />
                     }
                     return (
@@ -1100,10 +1215,22 @@ export default function ProjectPageClient({ id }: { id: string }) {
                   })()}
                 </TabsContent>
                 <TabsContent value="infrastructure" className="mt-0">
-                  {terraformConfig ? (
-                    <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-auto">
-                      <code>{terraformConfig}</code>
-                    </pre>
+                  {isGeneratingIaC ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Generating Infrastructure Code</h3>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
+                        Please wait while we generate your Terraform configuration based on your diagrams...
+                      </p>
+                      {renderIaCStatus()}
+                    </div>
+                  ) : terraformConfig ? (
+                    <div>
+                      <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-auto">
+                        <code>{terraformConfig}</code>
+                      </pre>
+                      {iacStatus && renderIaCStatus()}
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-800 mb-4">
@@ -1114,8 +1241,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
                         Enter a prompt and click "Generate Infrastructure" to create Terraform configuration.
                       </p>
                       {hasDiagrams && (
-                        <Button onClick={handleGenerateIaC} disabled={isGenerating}>
-                          {isGenerating && activeTab === "infrastructure" ? (
+                        <Button onClick={handleGenerateIaC} disabled={isGeneratingIaC || isGenerating}>
+                          {isGeneratingIaC ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Generating...

@@ -64,4 +64,4 @@ export function AuthButton({ provider, variant = "default", className = "" }: Au
       {session ? "Sign Out" : provider ? `Sign in with ${provider}` : "Sign In"}
     </Button>
   )
-} 
+}

@@ -43,4 +43,4 @@ export const projectsApi = {
     api(`/api/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) =>
     api(`/api/projects/${id}`, { method: 'DELETE' }),
-} 
+}
