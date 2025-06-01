@@ -3,9 +3,10 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, BarChart2, Code2, FileText, Layers, Play } from "lucide-react"
-import Mermaid from "@/components/mermaid-component"
 import { useState } from "react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import Mermaid from "@/components/mermaid-component"
+import WorkflowAnimation from "@/components/workflow-animation"
 
 export default function Home() {
   return (
@@ -57,24 +58,25 @@ export default function Home() {
                     </Button>
                   </Link>
                   <Link href="/demo">
-                    <Button size="lg" variant="secondary" className="gap-1 border-secondary text-secondary hover:bg-secondary/10">
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      className="gap-1 border-white text-white hover:bg-white/10 hover:text-white"
+                    >
                       View Demo
                     </Button>
                   </Link>
                 </div>
               </div>
-              <div className="mx-auto lg:ml-auto flex justify-center">
-                <div className="relative w-full max-w-[500px] aspect-video rounded-xl border-4 border-accent bg-white p-4 shadow-2xl dark:bg-gray-950">
-                  <img
-                    src="/uml-colorful-diagram.png"
-                    alt="UML Diagram Preview"
-                    className="rounded-md w-full h-full object-cover shadow-lg"
-                  />
+              <div className="w-full max-w-full overflow-hidden flex justify-center lg:justify-end">
+                <div className="w-full max-w-[650px] min-w-0">
+                  <WorkflowAnimation />
                 </div>
               </div>
             </div>
           </div>
         </section>
+
         <section className="w-full py-12 md:py-20 bg-white dark:bg-gray-950 border-b">
           <div className="container px-4 md:px-6 max-w-3xl mx-auto">
             <div className="flex flex-col items-center text-center mb-8">
@@ -90,7 +92,9 @@ export default function Home() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary">Key Features</h2>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary">
+                  Key Features
+                </h2>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   Everything you need to visualize and document your projects
                 </p>
@@ -154,23 +158,63 @@ function PlaygroundDemo() {
     class: {
       label: "Class Diagram",
       prompt: "Generate a class diagram for a blog platform with User, Post, and Comment.",
-      diagram: `classDiagram\n  User <|-- Post\n  Post <|-- Comment\n  User : +String name\n  Post : +String title\n  Comment : +String content`
+      diagram: `classDiagram
+    class User {
+        +String name
+        +String email
+        +createPost()
+    }
+    class Post {
+        +String title
+        +String content
+        +addComment()
+    }
+    class Comment {
+        +String content
+        +Date createdAt
+    }
+    User "1" --> "0..*" Post : creates
+    Post "1" --> "0..*" Comment : has`,
     },
     sequence: {
       label: "Sequence Diagram",
       prompt: "Generate a sequence diagram for a user logging in to a web app.",
-      diagram: `sequenceDiagram\n  User->>Browser: Enter credentials\n  Browser->>Server: Send login request\n  Server-->>Browser: Return token\n  Browser-->>User: Show dashboard`
+      diagram: `sequenceDiagram
+    User->>Browser: Enter credentials
+    Browser->>Server: Send login request
+    Server-->>Browser: Return token
+    Browser-->>User: Show dashboard`,
     },
     component: {
       label: "Component Diagram",
       prompt: "Generate a component diagram for a serverless web app on AWS.",
-      diagram: `flowchart TB\n  Client --> APIGateway\n  APIGateway --> Lambda\n  Lambda --> DynamoDB\n  Lambda --> S3\n  S3 --> CloudFront`
+      diagram: `flowchart TB
+    Client --> APIGateway
+    APIGateway --> Lambda
+    Lambda --> DynamoDB
+    Lambda --> S3
+    S3 --> CloudFront`,
     },
     erd: {
       label: "ERD Diagram",
       prompt: "Generate an ERD for an e-commerce system with Customer, Order, and Product.",
-      diagram: `erDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER ||--|{ PRODUCT : contains\n  CUSTOMER {\n    string id PK\n    string name\n  }\n  ORDER {\n    string id PK\n    date orderDate\n  }\n  PRODUCT {\n    string id PK\n    string name\n    float price\n  }`
+      diagram: `erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ PRODUCT : contains
+    CUSTOMER {
+        string id PK
+        string name
     }
+    ORDER {
+        string id PK
+        date orderDate
+    }
+    PRODUCT {
+        string id PK
+        string name
+        float price
+    }`,
+    },
   }
 
   const [tab, setTab] = useState<keyof typeof templates>("class")
@@ -193,10 +237,15 @@ function PlaygroundDemo() {
     setLoading(true)
     setError(null)
     setTimeout(() => {
-      setDiagram(prompt.includes("sequence") ? templates.sequence.diagram :
-        prompt.includes("component") ? templates.component.diagram :
-        prompt.includes("erd") || prompt.includes("entity") || prompt.includes("data model") ? templates.erd.diagram :
-        templates.class.diagram)
+      setDiagram(
+        prompt.includes("sequence")
+          ? templates.sequence.diagram
+          : prompt.includes("component")
+            ? templates.component.diagram
+            : prompt.includes("erd") || prompt.includes("entity") || prompt.includes("data model")
+              ? templates.erd.diagram
+              : templates.class.diagram,
+      )
       setLoading(false)
     }, 1200)
   }
@@ -206,14 +255,16 @@ function PlaygroundDemo() {
       <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4">
           {Object.entries(templates).map(([key, t]) => (
-            <TabsTrigger key={key} value={key} className="capitalize">{t.label}</TabsTrigger>
+            <TabsTrigger key={key} value={key} className="capitalize">
+              {t.label}
+            </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
       <textarea
         className="w-full min-h-[80px] rounded-lg border border-border p-3 text-base focus:ring-2 focus:ring-primary focus:outline-none transition"
         value={prompt}
-        onChange={e => setPrompt(e.target.value)}
+        onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe your system or diagram..."
         aria-label="Prompt for diagram generation"
       />
@@ -231,12 +282,10 @@ function PlaygroundDemo() {
         {loading ? (
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
         ) : (
-          <Mermaid chart={diagram} />
+          <Mermaid chart={diagram} className="transform scale-75 origin-top" />
         )}
       </div>
-      {error && (
-        <div className="text-red-600 text-sm mt-2">{error}</div>
-      )}
+      {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
     </div>
   )
 }

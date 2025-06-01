@@ -149,4 +149,4 @@ export default function DocumentationWithTOC({ content, diagrams = [] }: Documen
       </div>
     </div>
   )
-} 
+}

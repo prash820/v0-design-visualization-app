@@ -1,66 +1,71 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useRef, useState } from "react"
 import { AlertCircle } from "lucide-react"
 
 interface MermaidProps {
   chart: string
+  className?: string
+  fallback?: React.ReactNode
 }
 
 // Utility: auto-assign colors to nodes/services in component diagrams
 const pastelPalette = [
-  '#FFD6A5', // pastel orange
-  '#A7C7E7', // pastel blue
-  '#B5EAD7', // pastel green
-  '#FFB7B2', // pastel pink
-  '#FFFACD', // pastel yellow
-  '#C7CEEA', // pastel purple
-  '#FFDAC1', // pastel peach
-  '#E2F0CB', // pastel mint
+  "#FFD6A5", // pastel orange
+  "#A7C7E7", // pastel blue
+  "#B5EAD7", // pastel green
+  "#FFB7B2", // pastel pink
+  "#FFFACD", // pastel yellow
+  "#C7CEEA", // pastel purple
+  "#FFDAC1", // pastel peach
+  "#E2F0CB", // pastel mint
 ]
 
 function colorizeComponentDiagram(mermaidCode: string): string {
   // Only apply to flowchart/component diagrams
-  if (!/^\s*(flowchart|graph)\s/i.test(mermaidCode)) return mermaidCode;
+  if (!/^\s*(flowchart|graph)\s/i.test(mermaidCode)) return mermaidCode
 
   // Find all node IDs (e.g., A[Service A], B, etc.)
-  const nodeRegex = /([A-Za-z0-9_]+)\s*(\[|\(|\{)/g;
-  const nodes = new Set<string>();
-  let match;
+  const nodeRegex = /([A-Za-z0-9_]+)\s*(\[|\(|\{)/g
+  const nodes = new Set<string>()
+  let match
   while ((match = nodeRegex.exec(mermaidCode))) {
-    nodes.add(match[1]);
+    nodes.add(match[1])
   }
-  const nodeList = Array.from(nodes);
+  const nodeList = Array.from(nodes)
   // Assign a color class to each node
-  let classDefs = '';
-  let classAssigns = '';
+  let classDefs = ""
+  let classAssigns = ""
   nodeList.forEach((node, idx) => {
-    const color = pastelPalette[idx % pastelPalette.length];
-    const border = '#FFB86B';
-    const text = '#22223B';
-    const className = `autoColor${idx}`;
-    classDefs += `classDef ${className} fill:${color},stroke:${border},color:${text},stroke-width:2px;\n`;
-    classAssigns += `class ${node} ${className};\n`;
-  });
+    const color = pastelPalette[idx % pastelPalette.length]
+    const border = "#FFB86B"
+    const text = "#22223B"
+    const className = `autoColor${idx}`
+    classDefs += `classDef ${className} fill:${color},stroke:${border},color:${text},stroke-width:2px;\n`
+    classAssigns += `class ${node} ${className};\n`
+  })
   // Append classDefs and classAssigns to the end
-  return `${mermaidCode}\n${classDefs}${classAssigns}`;
+  return `${mermaidCode}\n${classDefs}${classAssigns}`
 }
 
 function preprocessMermaidChart(chart: string): string {
-  return colorizeComponentDiagram(chart);
+  return colorizeComponentDiagram(chart)
 }
 
-export default function Mermaid({ chart }: MermaidProps) {
+export default function Mermaid({ chart, className, fallback }: MermaidProps) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const mermaidRef = useRef<HTMLDivElement>(null)
+  const [renderKey, setRenderKey] = useState(0)
 
   // Preprocess chart for component and sequence diagrams
-  const processedChart = preprocessMermaidChart(chart);
+  const processedChart = preprocessMermaidChart(chart)
 
   useEffect(() => {
-    if (!processedChart) {
+    if (!processedChart || processedChart.trim() === "") {
       setLoading(false)
       setError("No diagram data provided")
       return
@@ -72,10 +77,10 @@ export default function Mermaid({ chart }: MermaidProps) {
 
     const renderMermaid = async () => {
       try {
-        // Import mermaid
+        // Import mermaid dynamically
         const mermaidAPI = (await import("mermaid")).default
 
-        // Configure mermaid with a custom, non-default theme
+        // Configure mermaid with a custom theme optimized for hero animations
         mermaidAPI.initialize({
           startOnLoad: false,
           theme: "base",
@@ -85,7 +90,7 @@ export default function Mermaid({ chart }: MermaidProps) {
             primaryBorderColor: "#FFB86B", // Soft orange border
             lineColor: "#FFB86B",
             fontFamily: "'Inter', 'Segoe UI', 'Arial', sans-serif",
-            fontSize: "18px",
+            fontSize: className?.includes("scale-75") ? "12px" : "14px", // Smaller for playground
             edgeLabelBackground: "#fff",
             clusterBkg: "#FFF5E1", // Lighter orange background
             clusterBorder: "#FFB86B",
@@ -101,12 +106,35 @@ export default function Mermaid({ chart }: MermaidProps) {
             noteBkgColor: "#FFF5E1",
             noteBorderColor: "#FFB86B",
             // Make nodes rounded
-            nodeRadius: "12",
+            nodeRadius: "8",
+          },
+          // Add specific config for better rendering in constrained spaces
+          flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true,
+            curve: "basis",
+            diagramPadding: className?.includes("scale-75") ? 4 : 8,
+          },
+          sequence: {
+            useMaxWidth: true,
+            wrap: true,
+            width: className?.includes("scale-75") ? 120 : 150,
+          },
+          class: {
+            useMaxWidth: true,
+          },
+          // Add this to make diagrams more compact
+          htmlLabels: true,
+          gantt: {
+            useMaxWidth: true,
           },
         })
 
+        // Generate a unique ID for this render
+        const diagramId = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
         // Render the diagram
-        const { svg } = await mermaidAPI.render(`mermaid-${Date.now()}`, processedChart)
+        const { svg } = await mermaidAPI.render(diagramId, processedChart)
 
         if (isMounted) {
           setSvg(svg)
@@ -121,7 +149,7 @@ export default function Mermaid({ chart }: MermaidProps) {
       }
     }
 
-    // Add a small delay to ensure the component is mounted
+    // Add a small delay to ensure the component is mounted and ready
     const timer = setTimeout(() => {
       renderMermaid()
     }, 100)
@@ -130,41 +158,69 @@ export default function Mermaid({ chart }: MermaidProps) {
       isMounted = false
       clearTimeout(timer)
     }
-  }, [processedChart])
+  }, [processedChart, renderKey])
 
-  // Post-process SVG for extra uniqueness
+  // Force re-render when chart changes significantly
   useEffect(() => {
-    if (mermaidRef.current) {
-      const svg = mermaidRef.current.querySelector('svg')
-      if (svg) {
-        // Add a drop shadow filter
-        svg.style.filter = 'drop-shadow(0 6px 24px #A084E880)'
-        // Add a custom class for further CSS if needed
-        svg.classList.add('custom-mermaid-svg')
-        // Optionally, tweak more SVG styles here
+    setRenderKey((prev) => prev + 1)
+  }, [chart])
+
+  // Post-process SVG for extra styling
+  useEffect(() => {
+    if (mermaidRef.current && svg) {
+      const svgElement = mermaidRef.current.querySelector("svg")
+      if (svgElement) {
+        // Add responsive attributes
+        svgElement.setAttribute("width", "100%")
+        svgElement.setAttribute("height", "100%")
+        svgElement.style.maxWidth = "100%"
+        svgElement.style.minHeight = "100%"
+
+        // Ensure the viewBox is set for proper scaling
+        if (
+          !svgElement.getAttribute("viewBox") &&
+          svgElement.getAttribute("width") &&
+          svgElement.getAttribute("height")
+        ) {
+          const width = Number.parseFloat(svgElement.getAttribute("width") || "800")
+          const height = Number.parseFloat(svgElement.getAttribute("height") || "600")
+          svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
+        }
+
+        // Add a subtle drop shadow for hero animations
+        if (className?.includes("hero")) {
+          svgElement.style.filter = "drop-shadow(0 4px 12px rgba(0,0,0,0.1))"
+        }
+
+        // Add custom class for further CSS if needed
+        svgElement.classList.add("custom-mermaid-svg")
       }
     }
-  }, [svg])
+  }, [svg, className])
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-md min-h-[200px]">
+      <div
+        className={`flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-md min-h-[200px] ${className || ""}`}
+      >
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     )
   }
 
   if (error) {
+    if (fallback) {
+      return <>{fallback}</>
+    }
     return (
-      <div className="w-full">
+      <div className={`w-full ${className || ""}`}>
         <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-md mb-4">
           <div className="flex items-center mb-2">
             <AlertCircle className="h-4 w-4 mr-2" />
-            <p>Mermaid rendering failed. Showing diagram code instead.</p>
+            <p className="text-sm">Diagram preview unavailable. Showing code instead.</p>
           </div>
-          {error && <p className="text-sm mt-1">{error}</p>}
         </div>
-        <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-auto">
+        <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-auto text-xs">
           <code>{chart}</code>
         </pre>
       </div>
@@ -173,7 +229,7 @@ export default function Mermaid({ chart }: MermaidProps) {
 
   return (
     <div
-      className="mermaid-diagram w-full overflow-auto"
+      className={`mermaid-diagram w-full overflow-auto ${className || ""}`}
       dangerouslySetInnerHTML={{ __html: svg || "" }}
       ref={mermaidRef}
     />

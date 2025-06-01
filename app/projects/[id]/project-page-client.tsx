@@ -1149,4 +1149,4 @@ export default function ProjectPageClient({ id }: { id: string }) {
       <ConnectionStatus />
     </div>
   )
-} 
+}

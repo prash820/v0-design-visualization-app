@@ -29,4 +29,4 @@ export default function DesignTemplateRenderer({ template }: { template: any }) 
       {/* Add more sections as needed */}
     </div>
   );
-} 
+}
