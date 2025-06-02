@@ -20,9 +20,12 @@ import {
 } from "@/lib/api/visualization"
 import { validateToken } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
-import type { Project, UMLDiagram } from "@/lib/types"
+import type { Project, UMLDiagram, AppCodeResponse } from "@/lib/types"
 import { Progress } from "@/components/ui/progress"
 import ConnectionStatus from "@/components/connection-status"
+import { GenerateAppCode } from "./components/generate-app-code"
+import { CodeDisplay } from './components/code-display'
+import { CodeEditor } from './components/code-editor'
 
 // Define diagram type mapping
 const DIAGRAM_TYPE_MAPPING = {
@@ -56,6 +59,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
   const [isGeneratingIaC, setIsGeneratingIaC] = useState(false)
   const [iacProgress, setIacProgress] = useState(0)
   const [iacStatus, setIacStatus] = useState<string | null>(null)
+
+  const [generatedCode, setGeneratedCode] = useState<AppCodeResponse | null>(null)
 
   // Define diagram types
   const diagramTypes = [
@@ -161,8 +166,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
       setProject(projectData)
 
-      if (projectData.lastPrompt) {
-        setPrompt(projectData.lastPrompt)
+      if (projectData.prompt) {
+        setPrompt(projectData.prompt)
       }
 
       // If design documentation exists, set it
@@ -188,7 +193,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
                 DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] ||
                 `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
               diagramData: value,
-              prompt: projectData.lastPrompt || "",
+              prompt: projectData.prompt || "",
               createdAt: timestamp,
               updatedAt: timestamp,
             })
@@ -369,15 +374,19 @@ export default function ProjectPageClient({ id }: { id: string }) {
         throw new Error("Invalid project ID")
       }
 
+      console.log("[DEBUG] Prompt before updateProjectState:", prompt)
       // Try to save the prompt to the project state, but continue even if it fails
       try {
         // Skip state update if we're offline
         if (isOffline) {
           console.log("Device is offline, skipping project state update")
         } else {
-          const stateUpdateResult = await updateProjectState(projectId, { lastPrompt: prompt })
+          const stateUpdateResult = await updateProjectState(projectId, { prompt })
+          console.log("[DEBUG] updateProjectState result:", stateUpdateResult)
           if (stateUpdateResult) {
             console.log("Successfully updated project state with prompt")
+            await loadProject() // Reload project to get the latest prompt
+            console.log("[DEBUG] After loadProject, project:", project)
           } else {
             console.log("Project state update skipped or failed, continuing with diagram generation")
           }
@@ -713,7 +722,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
       // Update project state with the generated code
       await updateProjectState(id, {
-        lastPrompt: prompt,
+        prompt,
         lastCode: response.code,
         design: response.documentation || "",
       })
@@ -961,6 +970,38 @@ export default function ProjectPageClient({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectDiagrams])
 
+  const handleGenerateCode = async () => {
+    if (!project || !project.umlDiagrams) return;
+    
+    try {
+      setIsGenerating(true)
+      setError(null)
+      setGeneratedCode(null)
+
+      const response = await fetch('/api/generate-app-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: project.id,
+          umlDiagrams: project.umlDiagrams,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate code')
+      }
+
+      const data: AppCodeResponse = await response.json()
+      setGeneratedCode(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   if (!isAuthenticated || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -993,24 +1034,17 @@ export default function ProjectPageClient({ id }: { id: string }) {
     )
   }
 
+  console.log("[DEBUG] Render: project:", project)
+
   return (
     <div className="flex min-h-screen flex-col">
-      <DashboardHeader />
-      {isOffline && (
-        <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <WifiOff className="h-4 w-4 text-yellow-700 dark:text-yellow-500" />
-            <p className="text-sm text-yellow-700 dark:text-yellow-500">
-              You are currently offline. Some features may be limited.
-            </p>
-          </div>
-        </div>
-      )}
+      <DashboardHeader title={project?.name || "Project"} />
+      {isOffline && <ConnectionStatus isOffline={isOffline} />}
       <main className="flex-1 container py-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold">{project.name}</h1>
-            <p className="text-gray-500 dark:text-gray-400">{project.description}</p>
+            <h1 className="text-3xl font-bold">{project?.name}</h1>
+            <p className="text-gray-500 dark:text-gray-400">{project?.description}</p>
           </div>
           <Button variant="outline" onClick={() => router.push("/dashboard")}>
             Back to Dashboard
@@ -1099,7 +1133,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
                 <TabsList>
                   <TabsTrigger value="diagrams">Diagrams</TabsTrigger>
                   <TabsTrigger value="documentation">Documentation</TabsTrigger>
-                  <TabsTrigger value="infrastructure">Infrastructure</TabsTrigger>
+                  <TabsTrigger value="iac">Infrastructure</TabsTrigger>
+                  <TabsTrigger value="code">Application Code</TabsTrigger>
                 </TabsList>
               </CardHeader>
               <CardContent className="pt-4">
@@ -1149,6 +1184,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
                     </div>
                   )}
                 </TabsContent>
+
                 <TabsContent value="documentation" className="mt-0">
                   {(() => {
                     // Log for debugging
@@ -1214,7 +1250,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
                     )
                   })()}
                 </TabsContent>
-                <TabsContent value="infrastructure" className="mt-0">
+
+                <TabsContent value="iac" className="mt-0">
                   {isGeneratingIaC ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Loader2 className="h-8 w-8 animate-spin mb-4" />
@@ -1258,12 +1295,31 @@ export default function ProjectPageClient({ id }: { id: string }) {
                     </div>
                   )}
                 </TabsContent>
+
+                <TabsContent value="code" className="mt-0">
+                  <div className="grid grid-cols-1 gap-8">
+                    {project && (
+                      <GenerateAppCode
+                        project={project}
+                        onCodeGenerated={setGeneratedCode}
+                      />
+                    )}
+                    {generatedCode && (
+                      <CodeEditor 
+                        code={generatedCode}
+                        onSave={async (updatedCode) => {
+                          // TODO: Implement save functionality
+                          console.log('Saving updated code:', updatedCode)
+                        }}
+                      />
+                    )}
+                  </div>
+                </TabsContent>
               </CardContent>
             </Tabs>
           </Card>
         </div>
       </main>
-      <ConnectionStatus />
     </div>
   )
 }

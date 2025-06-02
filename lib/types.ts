@@ -3,7 +3,7 @@ export interface Project {
   userId: string
   name: string
   description?: string
-  lastPrompt?: string
+  prompt?: string
   lastCode?: string
   framework?: string
   diagramType?: string
@@ -246,7 +246,28 @@ export interface GenerateIaCResponse {
 }
 
 export interface ProjectStateUpdate {
-  lastPrompt?: string;
+  prompt?: string;
   lastCode?: string;
   design?: string;
+}
+
+export interface GenerateAppCodeRequest {
+  prompt: string;
+  projectId: string;
+  umlDiagrams: Record<string, string>;
+}
+
+export interface AppCodeResponse {
+  frontend: {
+    components: Record<string, string>;
+    pages: Record<string, string>;
+    utils: Record<string, string>;
+  };
+  backend: {
+    controllers: Record<string, string>;
+    models: Record<string, string>;
+    routes: Record<string, string>;
+    utils: Record<string, string>;
+  };
+  documentation: string;
 }

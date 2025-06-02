@@ -16,7 +16,11 @@ import { BarChart2, User, LogOut, Menu } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getCurrentUser, logoutUser } from "@/lib/api/auth"
 
-export default function DashboardHeader() {
+interface DashboardHeaderProps {
+  title?: string;
+}
+
+export default function DashboardHeader({ title }: DashboardHeaderProps) {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const router = useRouter()
   const { toast } = useToast()
@@ -47,10 +51,17 @@ export default function DashboardHeader() {
   return (
     <header className="border-b">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl">
-          <BarChart2 className="h-6 w-6" />
-          <span>VisualizeAI</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl">
+            <BarChart2 className="h-6 w-6" />
+            <span>VisualizeAI</span>
+          </Link>
+          {title && (
+            <span className="text-lg font-medium text-gray-600 dark:text-gray-400">
+              {title}
+            </span>
+          )}
+        </div>
         <nav className="hidden md:flex gap-6">
           <Link href="/dashboard" className="text-sm font-medium hover:underline underline-offset-4">
             Dashboard

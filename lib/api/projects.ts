@@ -13,7 +13,7 @@ export interface UpdateProjectRequest {
 }
 
 export interface ProjectStateUpdate {
-  lastPrompt?: string
+  prompt?: string
   lastCode?: string
   diagramType?: string
   design?: string

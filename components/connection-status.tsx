@@ -1,29 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { WifiOff } from "lucide-react"
 
-export default function ConnectionStatus() {
-  const [isOffline, setIsOffline] = useState(false)
+interface ConnectionStatusProps {
+  isOffline: boolean;
+}
 
-  useEffect(() => {
-    // Set initial state
-    setIsOffline(!navigator.onLine)
-
-    // Add event listeners for online/offline events
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    // Clean up event listeners
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [])
-
+export default function ConnectionStatus({ isOffline }: ConnectionStatusProps) {
   if (!isOffline) return null
 
   return (

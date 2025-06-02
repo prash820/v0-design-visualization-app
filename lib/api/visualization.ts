@@ -42,6 +42,27 @@ export interface GenerateIaCResponse {
   documentation: string
 }
 
+export interface GenerateAppCodeRequest {
+  prompt: string;
+  projectId: string;
+  umlDiagrams: Record<string, string>;
+}
+
+export interface AppCodeResponse {
+  frontend: {
+    components: Record<string, string>;
+    pages: Record<string, string>;
+    utils: Record<string, string>;
+  };
+  backend: {
+    controllers: Record<string, string>;
+    models: Record<string, string>;
+    routes: Record<string, string>;
+    utils: Record<string, string>;
+  };
+  documentation: string;
+}
+
 // Maximum number of retries for network requests
 const MAX_NETWORK_RETRIES = 2
 const NETWORK_RETRY_DELAY = 1000 // 1 second
@@ -1079,6 +1100,19 @@ export async function deployInfrastructure({ code, projectId }: DeployRequest): 
     throw error instanceof ApiError ? error : new ApiError("Failed to deploy infrastructure", 500)
   }
 }
+
+// Generate Application Code
+export const generateAppCode = async (request: GenerateAppCodeRequest): Promise<AppCodeResponse> => {
+  try {
+    console.log("Generating application code with request:", request);
+    const response = await apiClient.post<AppCodeResponse>(`${API_ENDPOINTS.GENERATE.IAC}/app`, request);
+    console.log("Application code generation response:", response);
+    return response;
+  } catch (error) {
+    console.error("Error generating application code:", error);
+    throw error instanceof ApiError ? error : new ApiError("Failed to generate application code", 500);
+  }
+};
 
 const DIAGRAM_TYPES = {
   CLASS: "class",
