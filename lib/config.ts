@@ -39,6 +39,7 @@ export const API_ENDPOINTS = {
     HIGH_LEVEL_DOCS: `${API_BASE_URL}/documentation/high-level`,
     LOW_LEVEL_DOCS: `${API_BASE_URL}/documentation/low-level`,
     IAC: `${API_BASE_URL}/iac`,
+    APP_CODE: `${API_BASE_URL}/code`,
     ASYNC_STATUS: (jobId: string) => `${API_BASE_URL}/documentation/status/${jobId}`,
     ASYNC_RESULT: (jobId: string) => `${API_BASE_URL}/documentation/result/${jobId}`,
   },

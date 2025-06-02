@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import DocumentationRenderer from "./documentation-renderer"
-import html2pdf from "html2pdf.js"
+import dynamic from 'next/dynamic';
 
 interface DocumentationWithTOCProps {
   content: string
@@ -77,16 +77,19 @@ export default function DocumentationWithTOC({ content, diagrams = [] }: Documen
   const exportPDF = () => {
     const element = document.getElementById('fullDocument');
     if (element) {
-      html2pdf()
-        .set({
-          margin: 10,
-          filename: 'MyDocumentation.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        })
-        .from(element)
-        .save();
+      // Dynamically import html2pdf.js only on the client
+      import('html2pdf.js').then((html2pdf) => {
+        html2pdf()
+          .set({
+            margin: 10,
+            filename: 'MyDocumentation.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          })
+          .from(element)
+          .save();
+      });
     }
   };
 

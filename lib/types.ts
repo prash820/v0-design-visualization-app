@@ -20,6 +20,21 @@ export interface Project {
   design?: string
   documentation?: Documentation
   designDocument?: DesignDocument
+  infraCode?: string
+  appCode?: {
+    frontend: {
+      components: Record<string, string>;
+      pages: Record<string, string>;
+      utils: Record<string, string>;
+    };
+    backend: {
+      controllers: Record<string, string>;
+      models: Record<string, string>;
+      routes: Record<string, string>;
+      utils: Record<string, string>;
+    };
+    documentation: string;
+  };
 }
 
 export interface UMLDiagram {
