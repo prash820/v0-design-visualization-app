@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,9 +31,26 @@ export default function DiagramTabs({ diagrams, isGenerating, onRegenerateAll }:
   )
   const { toast } = useToast()
 
+  const [diagramCodes, setDiagramCodes] = useState<Record<string, string>>({})
+  const updateTimeoutRef = useRef<NodeJS.Timeout>()
+
   // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value)
+  }
+
+  const handleCodeChange = (diagramId: string, newCode: string) => {
+    setDiagramCodes((prev) => ({
+      ...prev,
+      [diagramId]: newCode,
+    }))
+
+    // Debounced update to avoid too many re-renders
+    clearTimeout(updateTimeoutRef.current)
+    updateTimeoutRef.current = setTimeout(() => {
+      // Here you could call an API to save the changes
+      console.log("Code updated for diagram:", diagramId, newCode)
+    }, 1000)
   }
 
   // If no valid diagrams, show a message
@@ -100,7 +117,14 @@ export default function DiagramTabs({ diagrams, isGenerating, onRegenerateAll }:
                 </div>
               ) : (
                 <CardContent className="p-4">
-                  <DiagramRenderer diagram={diagram} />
+                  <DiagramRenderer
+                    diagram={{
+                      ...diagram,
+                      diagramData: diagramCodes[diagram.id] || diagram.diagramData,
+                    }}
+                    splitScreen={true}
+                    onCodeChange={(newCode) => handleCodeChange(diagram.id, newCode)}
+                  />
                 </CardContent>
               )}
             </TabsContent>

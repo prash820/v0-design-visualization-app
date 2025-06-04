@@ -111,4 +111,4 @@ export function GenerateAppCode({ project, onCodeGenerated }: GenerateAppCodePro
       )}
     </div>
   )
-} 
+}

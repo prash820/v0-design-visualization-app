@@ -197,4 +197,4 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
       </CardContent>
     </Card>
   );
-} 
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -18,10 +18,33 @@ const Mermaid = dynamic(() => import("./mermaid-component"), {
   ),
 })
 
-export default function DiagramRenderer({ diagram, className = "" }: { diagram: any; className?: string }) {
+interface DiagramRendererProps {
+  diagram: any
+  className?: string
+  splitScreen?: boolean
+  onCodeChange?: (code: string) => void
+}
+
+export default function DiagramRenderer({
+  diagram,
+  className = "",
+  splitScreen = false,
+  onCodeChange,
+}: DiagramRendererProps) {
   const [copied, setCopied] = useState(false)
   const [renderAttempt, setRenderAttempt] = useState(0)
+  const [localCode, setLocalCode] = useState(diagram?.diagramData || "")
   const { toast } = useToast()
+
+  // Update local code when diagram changes
+  useEffect(() => {
+    setLocalCode(diagram?.diagramData || "")
+  }, [diagram?.diagramData])
+
+  const handleCodeChange = (newCode: string) => {
+    setLocalCode(newCode)
+    onCodeChange?.(newCode)
+  }
 
   const handleCopyCode = () => {
     if (!diagram?.diagramData) return
@@ -57,6 +80,47 @@ export default function DiagramRenderer({ diagram, className = "" }: { diagram: 
 
   const handleRetry = () => {
     setRenderAttempt((prev) => prev + 1)
+  }
+
+  // If split screen mode, render the split layout
+  if (splitScreen) {
+    return (
+      <div className="flex h-[600px] border rounded-lg overflow-hidden">
+        {/* Diagram Preview - 2/3 width */}
+        <div className="flex-1 bg-white dark:bg-gray-900 border-r">
+          <div className="h-full p-4 overflow-auto">
+            <Mermaid key={`split-${renderAttempt}`} chart={localCode} />
+          </div>
+        </div>
+
+        {/* Code Editor - 1/3 width */}
+        <div className="w-1/3 bg-gray-50 dark:bg-gray-800 flex flex-col">
+          <div className="flex items-center justify-between p-3 border-b bg-gray-100 dark:bg-gray-700">
+            <span className="text-sm font-medium">Mermaid Code</span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handleRetry} title="Re-render diagram">
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleCopyCode}>
+                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDownload}>
+                <Download className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 p-0">
+            <textarea
+              value={localCode}
+              onChange={(e) => handleCodeChange(e.target.value)}
+              className="w-full h-full p-3 text-sm font-mono bg-transparent border-none resize-none focus:outline-none focus:ring-0"
+              placeholder="Enter Mermaid diagram code..."
+              spellCheck={false}
+            />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // If this is a simple renderer (no tabs, just the diagram)

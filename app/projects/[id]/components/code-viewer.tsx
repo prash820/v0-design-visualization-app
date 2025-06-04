@@ -132,4 +132,4 @@ export function CodeViewer({ code }: CodeViewerProps) {
       </CardContent>
     </Card>
   )
-} 
+}

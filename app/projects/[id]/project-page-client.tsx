@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Loader2, FileText, Code2, BarChart2, RefreshCw, CheckCircle, AlertCircle, WifiOff } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2, FileText, Code2, BarChart2, RefreshCw, CheckCircle, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import DashboardHeader from "@/components/dashboard-header"
 import DiagramTabs from "@/components/diagram-tabs"
@@ -24,8 +24,7 @@ import type { Project, UMLDiagram, AppCodeResponse } from "@/lib/types"
 import { Progress } from "@/components/ui/progress"
 import ConnectionStatus from "@/components/connection-status"
 import { GenerateAppCode } from "./components/generate-app-code"
-import { CodeDisplay } from './components/code-display'
-import { CodeEditor } from './components/code-editor'
+import { CodeEditor } from "./components/code-editor"
 
 // Define diagram type mapping
 const DIAGRAM_TYPE_MAPPING = {
@@ -971,17 +970,17 @@ export default function ProjectPageClient({ id }: { id: string }) {
   }, [projectDiagrams])
 
   const handleGenerateCode = async () => {
-    if (!project || !project.umlDiagrams) return;
-    
+    if (!project || !project.umlDiagrams) return
+
     try {
       setIsGenerating(true)
       setError(null)
       setGeneratedCode(null)
 
-      const response = await fetch('/api/generate-app-code', {
-        method: 'POST',
+      const response = await fetch("/api/generate-app-code", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           projectId: project.id,
@@ -990,13 +989,13 @@ export default function ProjectPageClient({ id }: { id: string }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate code')
+        throw new Error("Failed to generate code")
       }
 
       const data: AppCodeResponse = await response.json()
       setGeneratedCode(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setIsGenerating(false)
     }
@@ -1051,83 +1050,76 @@ export default function ProjectPageClient({ id }: { id: string }) {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>Generate</CardTitle>
-              <CardDescription>
-                Enter a prompt to generate diagrams. After reviewing, you can generate documentation and infrastructure
-                code.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Describe your system. For example: 'Generate diagrams for an e-commerce system with users, products, and orders.'"
-                className="min-h-[200px]"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Project Prompt</CardTitle>
+            <CardDescription>
+              Describe your system to generate or update diagrams, documentation, and code.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder="Describe your system. For example: 'Generate diagrams for an e-commerce system with users, products, and orders.'"
+              className="min-h-[120px]"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleGenerateDiagrams} disabled={isGenerating}>
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Diagrams...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Generate Diagrams
+                  </>
+                )}
+              </Button>
 
-              <div className="flex flex-col space-y-2">
-                <Button onClick={handleGenerateDiagrams} disabled={isGenerating} className="w-full">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Diagrams...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Generate Diagrams
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-            {hasDiagrams && (
-              <CardFooter className="flex flex-col space-y-2 pt-0">
-                <div className="w-full border-t my-2"></div>
-                <Button
-                  onClick={handleGenerateDocumentation}
-                  disabled={isGeneratingDocs || !hasDiagrams || isGenerating}
-                  className="w-full"
-                  variant="outline"
-                >
-                  {isGeneratingDocs ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Documentation...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Generate Documentation
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleGenerateIaC}
-                  disabled={isGeneratingIaC || isGenerating}
-                  variant="outline"
-                  className="w-full"
-                >
-                  {isGeneratingIaC ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Infrastructure...
-                    </>
-                  ) : (
-                    <>
-                      <Code2 className="mr-2 h-4 w-4" />
-                      Generate Infrastructure
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
+              {hasDiagrams && (
+                <>
+                  <Button
+                    onClick={handleGenerateDocumentation}
+                    disabled={isGeneratingDocs || !hasDiagrams || isGenerating}
+                    variant="outline"
+                  >
+                    {isGeneratingDocs ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Documentation...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Documentation
+                      </>
+                    )}
+                  </Button>
 
-          <Card className="lg:col-span-2">
+                  <Button onClick={handleGenerateIaC} disabled={isGeneratingIaC || isGenerating} variant="outline">
+                    {isGeneratingIaC ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Infrastructure...
+                      </>
+                    ) : (
+                      <>
+                        <Code2 className="mr-2 h-4 w-4" />
+                        Generate Infrastructure
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <CardHeader className="pb-0 pt-4">
                 <TabsList>
@@ -1298,18 +1290,13 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
                 <TabsContent value="code" className="mt-0">
                   <div className="grid grid-cols-1 gap-8">
-                    {project && (
-                      <GenerateAppCode
-                        project={project}
-                        onCodeGenerated={setGeneratedCode}
-                      />
-                    )}
+                    {project && <GenerateAppCode project={project} onCodeGenerated={setGeneratedCode} />}
                     {generatedCode && (
-                      <CodeEditor 
+                      <CodeEditor
                         code={generatedCode}
                         onSave={async (updatedCode) => {
                           // TODO: Implement save functionality
-                          console.log('Saving updated code:', updatedCode)
+                          console.log("Saving updated code:", updatedCode)
                         }}
                       />
                     )}
