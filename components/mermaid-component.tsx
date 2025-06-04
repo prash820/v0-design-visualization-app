@@ -74,6 +74,7 @@ function isValidMermaidSyntax(chart: string): boolean {
     "mindmap",
     "timeline",
     "quadrantChart",
+    "architecture-beta", // Allow architecture diagrams
   ]
 
   const hasValidStarter = validStarters.some((starter) => trimmed.toLowerCase().startsWith(starter.toLowerCase()))
@@ -162,9 +163,24 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
           gantt: {
             useMaxWidth: true,
           },
+          architecture: {
+            padding: 132,      // Try increasing for more whitespace
+            iconSize: 148,     // Try increasing/decreasing for icon clarity
+            fontSize: 118  
+          },
           // Suppress error rendering in DOM
           suppressErrorRendering: true,
         })
+
+        // Register the 'logos' icon pack for architecture diagrams
+        if (mermaidAPI.registerIconPacks) {
+          mermaidAPI.registerIconPacks([
+            {
+              name: 'logos',
+              loader: () => import('@iconify-json/logos').then((module) => module.icons),
+            },
+          ])
+        }
 
         // Generate a unique ID for this render
         const diagramId = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`

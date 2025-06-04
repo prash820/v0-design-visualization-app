@@ -373,7 +373,6 @@ export default function ProjectPageClient({ id }: { id: string }) {
         throw new Error("Invalid project ID")
       }
 
-      console.log("[DEBUG] Prompt before updateProjectState:", prompt)
       // Try to save the prompt to the project state, but continue even if it fails
       try {
         // Skip state update if we're offline
