@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useRef, useState } from "react"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Code } from "lucide-react"
 
 interface MermaidProps {
   chart: string
@@ -54,6 +54,33 @@ function preprocessMermaidChart(chart: string): string {
   return colorizeComponentDiagram(chart)
 }
 
+function isValidMermaidSyntax(chart: string): boolean {
+  // Basic validation to catch common syntax errors
+  const trimmed = chart.trim()
+  if (!trimmed) return false
+
+  // Check for basic diagram types
+  const validStarters = [
+    "graph",
+    "flowchart",
+    "sequenceDiagram",
+    "classDiagram",
+    "stateDiagram",
+    "erDiagram",
+    "journey",
+    "gantt",
+    "pie",
+    "gitgraph",
+    "mindmap",
+    "timeline",
+    "quadrantChart",
+  ]
+
+  const hasValidStarter = validStarters.some((starter) => trimmed.toLowerCase().startsWith(starter.toLowerCase()))
+
+  return hasValidStarter
+}
+
 export default function Mermaid({ chart, className, fallback }: MermaidProps) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +95,13 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
     if (!processedChart || processedChart.trim() === "") {
       setLoading(false)
       setError("No diagram data provided")
+      return
+    }
+
+    // Basic syntax validation before attempting to render
+    if (!isValidMermaidSyntax(processedChart)) {
+      setLoading(false)
+      setError("Invalid diagram syntax")
       return
     }
 
@@ -128,12 +162,14 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
           gantt: {
             useMaxWidth: true,
           },
+          // Suppress error rendering in DOM
+          suppressErrorRendering: true,
         })
 
         // Generate a unique ID for this render
         const diagramId = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-        // Render the diagram
+        // Render the diagram with error handling
         const { svg } = await mermaidAPI.render(diagramId, processedChart)
 
         if (isMounted) {
@@ -143,7 +179,8 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
       } catch (err) {
         console.error("Mermaid rendering error:", err)
         if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to render diagram")
+          // Don't show the raw mermaid error to users
+          setError("Unable to render diagram")
           setLoading(false)
         }
       }
@@ -214,15 +251,19 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
     }
     return (
       <div className={`w-full ${className || ""}`}>
-        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-md mb-4">
-          <div className="flex items-center mb-2">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            <p className="text-sm">Diagram preview unavailable. Showing code instead.</p>
+        <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-800 rounded-md min-h-[200px]">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Diagram Preview Unavailable</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              There's an issue with the diagram syntax. Please check your code and try again.
+            </p>
+            <div className="flex items-center justify-center text-xs text-gray-400">
+              <Code className="h-4 w-4 mr-1" />
+              Check the code panel for syntax errors
+            </div>
           </div>
         </div>
-        <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-auto text-xs">
-          <code>{chart}</code>
-        </pre>
       </div>
     )
   }
