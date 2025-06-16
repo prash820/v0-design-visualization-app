@@ -11,6 +11,7 @@ export interface Project {
   updatedAt?: string
   umlDiagrams?: {
     class?: string
+    entity?: string
     sequence?: string
     component?: string
     architecture?: string
@@ -48,6 +49,7 @@ export interface UMLDiagram {
 
   // For direct property format
   class?: string
+  entity?: string
   sequence?: string
   component?: string
   architecture?: string

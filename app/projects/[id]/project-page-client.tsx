@@ -29,6 +29,7 @@ import { CodeEditor } from "./components/code-editor"
 // Define diagram type mapping
 const DIAGRAM_TYPE_MAPPING = {
   class: "Class Diagram",
+  entity: "ERD Diagram",
   sequence: "Sequence Diagram",
   component: "Component Diagram",
   architecture: "Architecture Diagram",
@@ -63,6 +64,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
   // Define diagram types
   const diagramTypes = [
     { id: "class", name: "Class Diagram" },
+    { id: "entity", name: "ERD Diagram" },
     { id: "sequence", name: "Sequence Diagram" },
     { id: "component", name: "Component Diagram" },
     { id: "architecture", name: "Architecture Diagram" },
@@ -286,7 +288,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
       })
     }
     // Check for direct properties format
-    else if (response.class || response.sequence || response.component || response.architecture) {
+    else if (response.class || response.entity || response.sequence || response.component || response.architecture) {
       console.log("Found diagram data as direct properties")
 
       // Process each diagram type
@@ -499,6 +501,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
             diagramKey = "sequenceDiagram"
           } else if (diagram.diagramType.toLowerCase().includes("component")) {
             diagramKey = "componentDiagram"
+          } else if (diagram.diagramType.toLowerCase().includes("erd")) {
+            diagramKey = "entityDiagram"
           } else {
             // Use the diagram type as the key, converted to camelCase
             diagramKey = diagram.diagramType
@@ -920,9 +924,12 @@ export default function ProjectPageClient({ id }: { id: string }) {
         let type
         if (key.toLowerCase().includes("class")) type = "class"
         else if (key.toLowerCase().includes("sequence")) type = "sequence"
+        else if (key.toLowerCase().includes("entity") || key.toLowerCase().includes("erd")) type = "entity"
         else if (key.toLowerCase().includes("component")) type = "component"
         else if (key.toLowerCase().includes("architecture"))
           type = "component" // Map architecture to component
+        else if (key.toLowerCase().includes("data"))
+          type = "entity" // Map data to entity
         else if (key.toLowerCase().includes("integration")) type = "integration"
         if (!type) return null
         return {
@@ -950,6 +957,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
           let key = ""
           if (diagram.diagramType.toLowerCase().includes("class")) key = "class"
           else if (diagram.diagramType.toLowerCase().includes("sequence")) key = "sequence"
+          else if (diagram.diagramType.toLowerCase().includes("entity")) key = "entity"
           else if (diagram.diagramType.toLowerCase().includes("component")) key = "component"
           else if (diagram.diagramType.toLowerCase().includes("architecture")) key = "architecture"
           if (key) umlDiagrams[key] = diagram.diagramData

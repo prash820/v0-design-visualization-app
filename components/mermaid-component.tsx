@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useEffect, useRef, useState } from "react"
 import { AlertCircle, Code } from "lucide-react"
-import svgPanZoom from "svg-pan-zoom"
 
 interface MermaidProps {
   chart: string
@@ -67,6 +66,7 @@ function isValidMermaidSyntax(chart: string): boolean {
     "sequenceDiagram",
     "classDiagram",
     "stateDiagram",
+    "erDiagram",
     "journey",
     "gantt",
     "pie",
@@ -218,17 +218,16 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
     setRenderKey((prev) => prev + 1)
   }, [chart])
 
-  // Post-process SVG for extra styling and add pan/zoom
+  // Post-process SVG for extra styling
   useEffect(() => {
     if (mermaidRef.current && svg) {
       const svgElement = mermaidRef.current.querySelector("svg")
       if (svgElement) {
         // Add responsive attributes
         svgElement.setAttribute("width", "100%")
-        svgElement.style.height = "auto"
+        svgElement.setAttribute("height", "100%")
         svgElement.style.maxWidth = "100%"
-        svgElement.style.display = "block"
-        svgElement.style.minHeight = "0"
+        svgElement.style.minHeight = "100%"
 
         // Ensure the viewBox is set for proper scaling
         if (
@@ -248,24 +247,6 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
 
         // Add custom class for further CSS if needed
         svgElement.classList.add("custom-mermaid-svg")
-
-        // Clean up previous instance if any
-        if ((svgElement as any).__panZoomInstance) {
-          (svgElement as any).__panZoomInstance.destroy()
-        }
-        (svgElement as any).__panZoomInstance = svgPanZoom(svgElement, {
-          zoomEnabled: true,
-          controlIconsEnabled: true,
-          fit: true,
-          center: true,
-        })
-      }
-    }
-    // Cleanup on unmount
-    return () => {
-      const svgElement = mermaidRef.current?.querySelector("svg")
-      if (svgElement && (svgElement as any).__panZoomInstance) {
-        (svgElement as any).__panZoomInstance.destroy()
       }
     }
   }, [svg, className])
