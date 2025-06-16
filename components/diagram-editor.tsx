@@ -74,4 +74,4 @@ export function DiagramEditor({ initialCode, title = "Diagram Editor", onCodeCha
       </Card>
     </div>
   )
-} 
+}

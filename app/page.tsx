@@ -2,10 +2,8 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, BarChart2, Code2, FileText, Layers, Play } from "lucide-react"
-import { useState } from "react"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import Mermaid from "@/components/mermaid-component"
+import { ArrowRight, BarChart2, Code2, FileText, Layers } from "lucide-react"
+
 import WorkflowAnimation from "@/components/workflow-animation"
 
 export default function Home() {
@@ -44,16 +42,16 @@ export default function Home() {
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
               <div className="space-y-4">
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight drop-shadow-lg">
-                  Transform Your Ideas into Visual Diagrams
+                  Transform Ideas into Production-Ready Applications
                 </h1>
                 <p className="max-w-[600px] text-white/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Generate UML diagrams, flowcharts, and architecture diagrams using AI. Create, manage, and deploy your
-                  projects with ease.
+                  AI-powered platform that generates diagrams, documentation, infrastructure code, and full-stack
+                  applications from simple descriptions. Go from concept to deployment in minutes.
                 </p>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <Link href="/register">
                     <Button size="lg" className="gap-1 bg-accent hover:bg-accent/80 text-white shadow-lg">
-                      Get Started
+                      Start Building
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
@@ -77,56 +75,99 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="w-full py-12 md:py-20 bg-white dark:bg-gray-950 border-b">
-          <div className="container px-4 md:px-6 max-w-3xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-primary mb-2">Try the AI Diagram Playground</h2>
-              <p className="text-muted-foreground max-w-xl mb-4">
-                Type a prompt and see a live UML diagram generated instantly by AI.
-              </p>
-            </div>
-            <PlaygroundDemo />
-          </div>
-        </section>
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary">
-                  Key Features
+                  Complete Development Platform
                 </h2>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Everything you need to visualize and document your projects
+                  From concept to deployment - everything you need to build production-ready applications
                 </p>
               </div>
             </div>
-            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
-              <div className="flex flex-col items-center space-y-2 rounded-lg border-2 border-primary bg-primary/10 p-6 shadow-md">
-                <div className="rounded-full bg-accent p-3 text-white shadow-lg">
+            <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 mt-12">
+              <div className="flex flex-col items-center space-y-3 rounded-lg border-2 border-primary bg-primary/10 p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="rounded-full bg-primary p-3 text-white shadow-lg">
                   <Layers className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-bold text-primary">UML Diagrams</h3>
-                <p className="text-center text-muted-foreground">
-                  Generate class diagrams, sequence diagrams, and more using AI
+                <h3 className="text-lg font-bold text-primary">AI Diagram Generation</h3>
+                <p className="text-center text-sm text-muted-foreground">
+                  UML, sequence, architecture, and ERD diagrams generated from natural language descriptions
                 </p>
               </div>
-              <div className="flex flex-col items-center space-y-2 rounded-lg border-2 border-accent bg-accent/10 p-6 shadow-md">
-                <div className="rounded-full bg-secondary p-3 text-white shadow-lg">
+              <div className="flex flex-col items-center space-y-3 rounded-lg border-2 border-accent bg-accent/10 p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="rounded-full bg-accent p-3 text-white shadow-lg">
                   <FileText className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-bold text-accent">Documentation</h3>
-                <p className="text-center text-muted-foreground">
-                  Create high-level and low-level design documentation automatically
+                <h3 className="text-lg font-bold text-accent">Smart Documentation</h3>
+                <p className="text-center text-sm text-muted-foreground">
+                  Auto-generated technical docs, API contracts, and system specifications with TOC navigation
                 </p>
               </div>
-              <div className="flex flex-col items-center space-y-2 rounded-lg border-2 border-secondary bg-secondary/10 p-6 shadow-md">
-                <div className="rounded-full bg-primary p-3 text-white shadow-lg">
+              <div className="flex flex-col items-center space-y-3 rounded-lg border-2 border-secondary bg-secondary/10 p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="rounded-full bg-secondary p-3 text-white shadow-lg">
                   <Code2 className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-bold text-secondary">Infrastructure as Code</h3>
-                <p className="text-center text-muted-foreground">
-                  Generate and deploy Terraform configurations for cloud infrastructure
+                <h3 className="text-lg font-bold text-secondary">Full-Stack Code</h3>
+                <p className="text-center text-sm text-muted-foreground">
+                  Complete React/TypeScript frontend and Node.js/Express backend applications ready to deploy
                 </p>
+              </div>
+              <div className="flex flex-col items-center space-y-3 rounded-lg border-2 border-primary bg-primary/10 p-6 shadow-md hover:shadow-lg transition-shadow">
+                <div className="rounded-full bg-primary p-3 text-white shadow-lg">
+                  <BarChart2 className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-primary">Infrastructure as Code</h3>
+                <p className="text-center text-sm text-muted-foreground">
+                  Production-ready Terraform configurations for AWS with VPCs, load balancers, and databases
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-16 bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-lg">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-primary mb-2">Complete Workflow</h3>
+                <p className="text-muted-foreground">See how VisualizeAI transforms your ideas into reality</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-blue-600 font-bold text-lg">1</span>
+                  </div>
+                  <h4 className="font-semibold text-primary">Describe Your System</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Natural language input describing your application requirements
+                  </p>
+                </div>
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-purple-600 font-bold text-lg">2</span>
+                  </div>
+                  <h4 className="font-semibold text-primary">AI Analysis & Design</h4>
+                  <p className="text-sm text-muted-foreground">
+                    AI generates architecture diagrams and system documentation
+                  </p>
+                </div>
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-green-600 font-bold text-lg">3</span>
+                  </div>
+                  <h4 className="font-semibold text-primary">Code Generation</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Full-stack application code and infrastructure configurations
+                  </p>
+                </div>
+                <div className="text-center space-y-2">
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-orange-600 font-bold text-lg">4</span>
+                  </div>
+                  <h4 className="font-semibold text-primary">Deploy & Scale</h4>
+                  <p className="text-sm text-muted-foreground">
+                    One-click deployment to cloud with auto-scaling infrastructure
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -149,143 +190,6 @@ export default function Home() {
           <div className="flex-1 text-center md:text-right text-xs">© 2025 VisualizeAI. All rights reserved.</div>
         </div>
       </footer>
-    </div>
-  )
-}
-
-function PlaygroundDemo() {
-  const templates = {
-    class: {
-      label: "Class Diagram",
-      prompt: "Generate a class diagram for a blog platform with User, Post, and Comment.",
-      diagram: `classDiagram
-    class User {
-        +String name
-        +String email
-        +createPost()
-    }
-    class Post {
-        +String title
-        +String content
-        +addComment()
-    }
-    class Comment {
-        +String content
-        +Date createdAt
-    }
-    User "1" --> "0..*" Post : creates
-    Post "1" --> "0..*" Comment : has`,
-    },
-    sequence: {
-      label: "Sequence Diagram",
-      prompt: "Generate a sequence diagram for a user logging in to a web app.",
-      diagram: `sequenceDiagram
-    User->>Browser: Enter credentials
-    Browser->>Server: Send login request
-    Server-->>Browser: Return token
-    Browser-->>User: Show dashboard`,
-    },
-    component: {
-      label: "Component Diagram",
-      prompt: "Generate a component diagram for a serverless web app on AWS.",
-      diagram: `flowchart TB
-    Client --> APIGateway
-    APIGateway --> Lambda
-    Lambda --> DynamoDB
-    Lambda --> S3
-    S3 --> CloudFront`,
-    },
-    erd: {
-      label: "ERD Diagram",
-      prompt: "Generate an ERD for an e-commerce system with Customer, Order, and Product.",
-      diagram: `erDiagram
-    CUSTOMER ||--o{ ORDER : places
-    ORDER ||--|{ PRODUCT : contains
-    CUSTOMER {
-        string id PK
-        string name
-    }
-    ORDER {
-        string id PK
-        date orderDate
-    }
-    PRODUCT {
-        string id PK
-        string name
-        float price
-    }`,
-    },
-  }
-
-  const [tab, setTab] = useState<keyof typeof templates>("class")
-  const [prompt, setPrompt] = useState(templates.class.prompt)
-  const [diagram, setDiagram] = useState<string>(templates.class.diagram)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // When tab changes, update prompt and diagram to template
-  const handleTabChange = (value: string) => {
-    const t = value as keyof typeof templates
-    setTab(t)
-    setPrompt(templates[t].prompt)
-    setDiagram(templates[t].diagram)
-    setError(null)
-  }
-
-  // Simulate AI generation (replace with real API call if available)
-  const handleGenerate = () => {
-    setLoading(true)
-    setError(null)
-    setTimeout(() => {
-      setDiagram(
-        prompt.includes("sequence")
-          ? templates.sequence.diagram
-          : prompt.includes("component")
-            ? templates.component.diagram
-            : prompt.includes("erd") || prompt.includes("entity") || prompt.includes("data model")
-              ? templates.erd.diagram
-              : templates.class.diagram,
-      )
-      setLoading(false)
-    }, 1200)
-  }
-
-  return (
-    <div className="rounded-2xl bg-muted/50 p-6 shadow-lg flex flex-col gap-6">
-      <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="mb-4">
-          {Object.entries(templates).map(([key, t]) => (
-            <TabsTrigger key={key} value={key} className="capitalize">
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <textarea
-        className="w-full min-h-[80px] rounded-lg border border-border p-3 text-base focus:ring-2 focus:ring-primary focus:outline-none transition"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Describe your system or diagram..."
-        aria-label="Prompt for diagram generation"
-      />
-      <div className="flex gap-4 items-center justify-end">
-        <button
-          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white font-semibold shadow-md hover:bg-primary/90 active:scale-95 transition disabled:opacity-60"
-          onClick={handleGenerate}
-          disabled={loading}
-        >
-          <Play className="h-4 w-4" />
-          {loading ? "Generating..." : "Generate Diagram"}
-        </button>
-      </div>
-      <div className="w-full min-h-[220px] bg-white dark:bg-gray-900 rounded-lg border border-border p-4 flex items-center justify-center">
-        {loading ? (
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-        ) : (
-          <Mermaid chart={diagram} className="transform scale-75 origin-top" />
-        )}
-      </div>
-      {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
     </div>
   )
 }
