@@ -7,7 +7,7 @@ import "highlight.js/styles/github-dark.css"
 import mermaid from "mermaid"
 import { Card } from "@/components/ui/card"
 
-type DiagramType = 'component' | 'data-model' | 'integration' | 'class' | 'sequence' | 'entity' | 'architecture';
+type DiagramType = 'component' | 'data-model' | 'integration' | 'class' | 'sequence' | 'architecture';
 
 interface Diagram {
   type: DiagramType;
@@ -61,10 +61,6 @@ const sectionToDiagramType: Record<string, DiagramType> = {
   "System Architecture": "component",
   "Component Architecture": "component",
   "Architecture Overview": "component",
-  "Data Models": "entity",
-  "Entity Relationship": "entity",
-  "Database Schema": "entity",
-  "Data Model": "entity",
   "API Contracts": "sequence",
   "Sequence Diagram": "sequence",
   "API Flow": "sequence",

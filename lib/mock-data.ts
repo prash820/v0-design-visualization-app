@@ -72,17 +72,6 @@ export const mockDiagrams = [
     updatedAt: "2025-05-02T10:15:00Z",
   },
   {
-    id: "diagram-4",
-    projectId: "project-1",
-    diagramType: "ERD Diagram",
-    diagramData: `erDiagram
-    CUSTOMER ||--o{ ORDER : places
-    ORDER ||--|{ PRODUCT : contains`,
-    prompt: "Generate an ERD diagram for an e-commerce database.",
-    createdAt: "2025-04-18T09:30:00Z",
-    updatedAt: "2025-04-18T09:30:00Z",
-  },
-  {
     id: "diagram-5",
     projectId: "project-1",
     diagramType: "Architecture Diagram",
