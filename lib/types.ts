@@ -49,7 +49,6 @@ export interface UMLDiagram {
 
   // For direct property format
   class?: string
-  entity?: string
   sequence?: string
   component?: string
   architecture?: string
@@ -253,11 +252,15 @@ export interface GenerateIaCRequest {
   prompt: string;
   projectId: string;
   umlDiagrams: Record<string, string>;
+  async?: boolean;
 }
 
 export interface GenerateIaCResponse {
-  code: string;
-  documentation: string;
+  code?: string;
+  documentation?: string;
+  jobId?: string;
+  status?: string;
+  message?: string;
 }
 
 export interface ProjectStateUpdate {

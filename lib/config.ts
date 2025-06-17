@@ -40,7 +40,7 @@ export const API_ENDPOINTS = {
     LOW_LEVEL_DOCS: `${API_BASE_URL}/documentation/low-level`,
     IAC: `${API_BASE_URL}/iac`,
     APP_CODE: `${API_BASE_URL}/code`,
-    ASYNC_STATUS: (jobId: string) => `${API_BASE_URL}/documentation/status/${jobId}`,
+    ASYNC_STATUS: (jobId: string, projectId: string) => `${API_BASE_URL}/documentation/status/${jobId}?projectId=${projectId}`,
     ASYNC_RESULT: (jobId: string) => `${API_BASE_URL}/documentation/result/${jobId}`,
   },
   // Deployment endpoint
@@ -50,7 +50,6 @@ export const API_ENDPOINTS = {
 // Diagram types mapping
 export const DIAGRAM_TYPES = {
   CLASS: "class",
-  ERD: "erd",
   SEQUENCE: "sequence",
   ARCHITECTURE: "architecture",
   COMPONENT: "component",

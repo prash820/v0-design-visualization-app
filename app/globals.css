@@ -216,3 +216,24 @@ body {
   width: 100%;
   overflow: auto;
 }
+
+/* Ensure code blocks are readable and match the theme */
+pre, pre code, code.hljs {
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--card)) !important;
+  font-family: 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 1em;
+  line-height: 1.6;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+/* Make inline code readable too */
+code {
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted));
+  padding: 0.2em 0.4em;
+  border-radius: 0.3em;
+  font-size: 0.95em;
+}

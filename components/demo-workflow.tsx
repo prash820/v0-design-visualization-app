@@ -133,49 +133,29 @@ const demoSteps = [
     Notification --> EmailSvc`,
         },
         {
-          title: "Database Schema",
-          type: "erd",
-          diagram: `erDiagram
-    USER ||--o{ ORDER : places
-    USER ||--o{ CART_ITEM : has
-    ORDER ||--|{ ORDER_ITEM : contains
-    PRODUCT ||--o{ ORDER_ITEM : included_in
-    PRODUCT ||--o{ CART_ITEM : added_to
-    CATEGORY ||--o{ PRODUCT : contains
-    
-    USER {
-        uuid id PK
-        string email UK
-        string password_hash
-        string first_name
-        string last_name
-        timestamp created_at
-        timestamp updated_at
-    }
-    
-    PRODUCT {
-        uuid id PK
-        string name
-        text description
-        decimal price
-        int stock_quantity
-        uuid category_id FK
-        timestamp created_at
-    }
-    
-    ORDER {
-        uuid id PK
-        uuid user_id FK
-        decimal total_amount
-        string status
-        timestamp created_at
-    }
-    
-    CATEGORY {
-        uuid id PK
-        string name
-        text description
-    }`,
+          title: "Class Structure",
+          type: "class",
+          diagram: `classDiagram
+      class User {
+        +String name
+        +String email
+        -String password
+        +login(): boolean
+      }
+      class Admin {
+        +String role
+        +manageUsers(): void
+      }
+      User <|-- Admin`,
+        },
+        {
+          title: "API Flow",
+          type: "sequence",
+          diagram: `sequenceDiagram
+      Client->>Server: POST /api/login
+      Server->>Database: Validate credentials
+      Database-->>Server: Return user data
+      Server-->>Client: Return JWT token`,
         },
       ],
     },

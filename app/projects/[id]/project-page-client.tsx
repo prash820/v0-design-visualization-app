@@ -17,6 +17,7 @@ import {
   generateDocumentation,
   generateDocumentationAsync,
   generateIaC,
+  checkAsyncJobStatus,
 } from "@/lib/api/visualization"
 import { validateToken } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
@@ -29,7 +30,6 @@ import { CodeEditor } from "./components/code-editor"
 // Define diagram type mapping
 const DIAGRAM_TYPE_MAPPING = {
   class: "Class Diagram",
-  entity: "ERD Diagram",
   sequence: "Sequence Diagram",
   component: "Component Diagram",
   architecture: "Architecture Diagram",
@@ -58,13 +58,13 @@ export default function ProjectPageClient({ id }: { id: string }) {
   const [isGeneratingIaC, setIsGeneratingIaC] = useState(false)
   const [iacProgress, setIacProgress] = useState(0)
   const [iacStatus, setIacStatus] = useState<string | null>(null)
+  const [iacJobId, setIacJobId] = useState<string | null>(null)
 
   const [generatedCode, setGeneratedCode] = useState<AppCodeResponse | null>(null)
 
   // Define diagram types
   const diagramTypes = [
     { id: "class", name: "Class Diagram" },
-    { id: "entity", name: "ERD Diagram" },
     { id: "sequence", name: "Sequence Diagram" },
     { id: "component", name: "Component Diagram" },
     { id: "architecture", name: "Architecture Diagram" },
@@ -172,6 +172,11 @@ export default function ProjectPageClient({ id }: { id: string }) {
       // If design documentation exists, set it
       if (projectData.design) {
         setDocumentation(projectData.design)
+      }
+
+      // If infrastructure code exists, set it
+      if (projectData.infraCode) {
+        setTerraformConfig(projectData.infraCode)
       }
 
       // Check if the project has UML diagrams
@@ -288,7 +293,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
       })
     }
     // Check for direct properties format
-    else if (response.class || response.entity || response.sequence || response.component || response.architecture) {
+    else if (response.class || response.sequence || response.component || response.architecture) {
       console.log("Found diagram data as direct properties")
 
       // Process each diagram type
@@ -501,8 +506,6 @@ export default function ProjectPageClient({ id }: { id: string }) {
             diagramKey = "sequenceDiagram"
           } else if (diagram.diagramType.toLowerCase().includes("component")) {
             diagramKey = "componentDiagram"
-          } else if (diagram.diagramType.toLowerCase().includes("erd")) {
-            diagramKey = "entityDiagram"
           } else {
             // Use the diagram type as the key, converted to camelCase
             diagramKey = diagram.diagramType
@@ -656,6 +659,111 @@ export default function ProjectPageClient({ id }: { id: string }) {
     }
   }
 
+  // Add polling effect for IaC generation
+  useEffect(() => {
+    let pollingInterval: NodeJS.Timeout | null = null
+
+    const pollIaCStatus = async () => {
+      if (!iacJobId) return
+      try {
+        const statusResp = await checkAsyncJobStatus(iacJobId, id)
+        setIacStatus(statusResp.status)
+        
+        // Calculate progress based on status
+        let progress = iacProgress
+        if (statusResp.status === "processing") {
+          progress = Math.min(90, (statusResp.progress ?? 0) + 40) // Add 40 to the base progress
+        } else if (statusResp.status === "completed") {
+          progress = 100
+        }
+        setIacProgress(progress)
+        
+        console.log("[IaC Poll] Status response:", statusResp)
+        
+        if (statusResp.status === "completed") {
+          if (statusResp.result) {
+            console.log("[IaC Poll] Received result:", statusResp.result)
+            
+            // Extract the code from the response
+            let infrastructureCode = statusResp.result
+            if (typeof infrastructureCode === 'object' && infrastructureCode.code) {
+              infrastructureCode = infrastructureCode.code
+            }
+            
+            // Clean and validate the code
+            const cleanedCode = infrastructureCode.trim()
+            if (!cleanedCode.includes('provider') && !cleanedCode.includes('resource')) {
+              throw new Error("Invalid Terraform configuration received")
+            }
+            
+            // Update project state with the generated code
+            try {
+              await updateProjectState(id, {
+                lastCode: cleanedCode,
+              })
+              
+              // Reload the project to get the latest infraCode
+              await loadProject()
+              
+              toast({
+                title: "Success",
+                description: "Infrastructure code generated successfully",
+                variant: "default",
+              })
+            } catch (err) {
+              console.error("[IaC Poll] Error updating project state:", err)
+            }
+          } else {
+            console.error("[IaC Poll] No result in completed status response")
+            setError("No infrastructure code was generated. Please try again.")
+          }
+          
+          setIsGeneratingIaC(false)
+          setIacStatus("completed")
+          setIacProgress(100)
+          setIacJobId(null) // Stop polling
+        } else if (statusResp.status === "failed") {
+          console.error("[IaC Poll] Generation failed:", statusResp.error)
+          setIsGeneratingIaC(false)
+          setIacStatus("failed")
+          setIacProgress(0)
+          setIacJobId(null)
+          if (statusResp.error) {
+            setError(statusResp.error)
+            toast({
+              title: "Error",
+              description: statusResp.error,
+              variant: "destructive",
+            })
+          }
+        }
+      } catch (err) {
+        console.error("[IaC Poll] Error polling infrastructure status:", err)
+        setIsGeneratingIaC(false)
+        setIacStatus("failed")
+        setIacProgress(0)
+        setIacJobId(null)
+        const errorMessage = err instanceof Error ? err.message : "Failed to poll infrastructure status. Please try again."
+        setError(errorMessage)
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    }
+
+    if (iacJobId && (iacStatus === "pending" || iacStatus === "processing")) {
+      pollIaCStatus() // Immediate first poll
+      pollingInterval = setInterval(pollIaCStatus, 3000)
+    }
+
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval)
+    }
+  }, [iacJobId]) // Only depend on iacJobId to prevent unnecessary re-runs
+
+  // Update handleGenerateIaC to match documentation pattern
   const handleGenerateIaC = async () => {
     try {
       console.log("Starting infrastructure generation process")
@@ -669,22 +777,18 @@ export default function ProjectPageClient({ id }: { id: string }) {
         return
       }
 
+      // Clear any previous error and terraform config
+      setError(null)
+      setTerraformConfig("")
+
       // Set loading state and switch to infrastructure tab
       setIsGeneratingIaC(true)
       setIacProgress(0)
-      setIacStatus("initializing")
+      setIacStatus("pending")
       setActiveTab("infrastructure")
 
       console.log("Prompt:", prompt)
       console.log("Project ID:", id)
-
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setIacProgress((prev) => {
-          if (prev < 80) return prev + 10
-          return prev
-        })
-      }, 500)
 
       // Get all UML diagrams from the project
       const umlDiagrams: Record<string, string> = {}
@@ -698,66 +802,36 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
       console.log("Processing project diagrams:", umlDiagrams)
 
-      // Update status
-      setIacStatus("generating")
-
-      // Generate IaC
+      // Start async IaC generation
       const response = await generateIaC({
         prompt,
         projectId: id,
         umlDiagrams,
+        async: true
       })
 
-      console.log("IaC generation response:", response)
-
-      if (!response.code) {
-        throw new Error("No code generated in the response")
+      if (!response.jobId) {
+        throw new Error("No job ID received from the server")
       }
 
-      // Update status and progress
-      setIacStatus("saving")
-      setIacProgress(90)
-
-      // Update project state with the generated code
-      await updateProjectState(id, {
-        prompt,
-        lastCode: response.code,
-        design: response.documentation || "",
-      })
-
-      // Complete progress
-      setIacProgress(100)
-      setIacStatus("completed")
-
-      // Clear progress interval
-      clearInterval(progressInterval)
-
-      // Update the UI
-      setTerraformConfig(response.code)
-      if (response.documentation) {
-        setDocumentation(response.documentation)
-      }
+      // Set the job ID to trigger the polling effect
+      setIacJobId(response.jobId)
+      setIacStatus("processing")
+      setIacProgress(20)
 
       toast({
-        title: "Success",
-        description: "Infrastructure code generated successfully",
-        variant: "default",
+        title: "Infrastructure generation started",
+        description: "Your infrastructure code is being generated. This may take a minute or two.",
       })
-
-      // Reset status after a delay
-      setTimeout(() => {
-        setIacStatus(null)
-        setIacProgress(0)
-      }, 2000)
     } catch (error) {
       console.error("Error in handleGenerateIaC:", error)
       setIacStatus("failed")
+      setError(error instanceof Error ? error.message : "Failed to generate infrastructure code")
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to generate infrastructure code",
         variant: "destructive",
       })
-    } finally {
       setIsGeneratingIaC(false)
     }
   }
@@ -812,6 +886,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
     let statusText = ""
     let statusColor = ""
+    let icon = <Loader2 className="h-5 w-5 animate-spin mr-2" />
 
     switch (iacStatus) {
       case "initializing":
@@ -822,17 +897,19 @@ export default function ProjectPageClient({ id }: { id: string }) {
         statusText = "Generating Terraform configuration... This may take a moment."
         statusColor = "text-blue-600 dark:text-blue-400"
         break
-      case "saving":
-        statusText = "Saving infrastructure code..."
+      case "processing":
+        statusText = "Processing and validating infrastructure code..."
         statusColor = "text-blue-600 dark:text-blue-400"
         break
       case "completed":
         statusText = "Infrastructure code generated successfully!"
         statusColor = "text-green-600 dark:text-green-400"
+        icon = <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
         break
       case "failed":
-        statusText = "Failed to generate infrastructure code. Please try again."
+        statusText = error || "Failed to generate infrastructure code. Please try again."
         statusColor = "text-red-600 dark:text-red-400"
+        icon = <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
         break
       default:
         statusText = "Processing..."
@@ -842,16 +919,12 @@ export default function ProjectPageClient({ id }: { id: string }) {
     return (
       <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
         <div className="flex items-center mb-2">
-          {iacStatus === "failed" ? (
-            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-          ) : iacStatus === "completed" ? (
-            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-          ) : (
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-          )}
+          {icon}
           <p className={`text-sm font-medium ${statusColor}`}>{statusText}</p>
         </div>
-        {iacStatus !== "failed" && iacStatus !== "completed" && <Progress value={iacProgress} className="h-2 mt-2" />}
+        {iacStatus !== "failed" && (
+          <Progress value={iacProgress} className="h-2 mt-2" />
+        )}
       </div>
     )
   }
@@ -862,7 +935,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
     const pollStatus = async () => {
       if (!asyncDocJobId) return
       try {
-        const statusResp = await import("@/lib/api/visualization").then((m) => m.checkAsyncJobStatus(asyncDocJobId, id))
+        const statusResp = await checkAsyncJobStatus(asyncDocJobId, id)
         setAsyncStatus(statusResp.status)
         setAsyncProgress(statusResp.progress ?? 0)
         // Print status response for debugging
@@ -924,12 +997,10 @@ export default function ProjectPageClient({ id }: { id: string }) {
         let type
         if (key.toLowerCase().includes("class")) type = "class"
         else if (key.toLowerCase().includes("sequence")) type = "sequence"
-        else if (key.toLowerCase().includes("entity") || key.toLowerCase().includes("erd")) type = "entity"
         else if (key.toLowerCase().includes("component")) type = "component"
         else if (key.toLowerCase().includes("architecture"))
           type = "component" // Map architecture to component
-        else if (key.toLowerCase().includes("data"))
-          type = "entity" // Map data to entity
+      
         else if (key.toLowerCase().includes("integration")) type = "integration"
         if (!type) return null
         return {
@@ -957,7 +1028,6 @@ export default function ProjectPageClient({ id }: { id: string }) {
           let key = ""
           if (diagram.diagramType.toLowerCase().includes("class")) key = "class"
           else if (diagram.diagramType.toLowerCase().includes("sequence")) key = "sequence"
-          else if (diagram.diagramType.toLowerCase().includes("entity")) key = "entity"
           else if (diagram.diagramType.toLowerCase().includes("component")) key = "component"
           else if (diagram.diagramType.toLowerCase().includes("architecture")) key = "architecture"
           if (key) umlDiagrams[key] = diagram.diagramData
@@ -1253,11 +1323,29 @@ export default function ProjectPageClient({ id }: { id: string }) {
                       {renderIaCStatus()}
                     </div>
                   ) : terraformConfig ? (
-                    <div>
-                      <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-auto">
-                        <code>{terraformConfig}</code>
-                      </pre>
-                      {iacStatus && renderIaCStatus()}
+                    <div className="space-y-4">
+                      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="text-lg font-medium">Generated Terraform Configuration</h3>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(terraformConfig);
+                              toast({
+                                title: "Copied",
+                                description: "Infrastructure code copied to clipboard",
+                              });
+                            }}
+                          >
+                            Copy Code
+                          </Button>
+                        </div>
+                        <pre className="overflow-auto max-h-[600px] p-4 bg-gray-50 dark:bg-gray-900 rounded border">
+                          <code className="text-sm font-mono">{terraformConfig}</code>
+                        </pre>
+                      </div>
+                      {iacStatus && iacStatus !== "completed" && renderIaCStatus()}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1266,9 +1354,9 @@ export default function ProjectPageClient({ id }: { id: string }) {
                       </div>
                       <h3 className="text-lg font-medium mb-2">No infrastructure code yet</h3>
                       <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                        Enter a prompt and click "Generate Infrastructure" to create Terraform configuration.
+                        {error || "Click 'Generate Infrastructure' to create Terraform configuration."}
                       </p>
-                      {hasDiagrams && (
+                      {hasDiagrams && !isGeneratingIaC && (
                         <Button onClick={handleGenerateIaC} disabled={isGeneratingIaC || isGenerating}>
                           {isGeneratingIaC ? (
                             <>

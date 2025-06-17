@@ -66,7 +66,6 @@ function isValidMermaidSyntax(chart: string): boolean {
     "sequenceDiagram",
     "classDiagram",
     "stateDiagram",
-    "erDiagram",
     "journey",
     "gantt",
     "pie",

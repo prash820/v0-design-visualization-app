@@ -21,7 +21,9 @@ export interface GenerateDocumentationRequest {
 export interface GenerateIaCRequest {
   prompt: string
   projectId: string
-  umlDiagrams: Record<string, string>
+  umlDiagrams?: Record<string, string>
+  documentation?: string
+  async?: boolean
 }
 
 export interface DeployRequest {
@@ -494,104 +496,14 @@ ${mockDoc.content.split("\n").slice(2).join("\n")}
   return { jobId: offlineJobId }
 }
 
-// Update the checkAsyncJobStatus function to accept projectId
+// Update the checkAsyncJobStatus function to use the correct endpoint
 export async function checkAsyncJobStatus(jobId: string, projectId?: string): Promise<AsyncJobResponse> {
   try {
-    // Check if this is a mock job (including fallback, recovery, and offline jobs)
-    if (
-      (jobId.startsWith("mock-") ||
-        jobId.startsWith("fallback-") ||
-        jobId.startsWith("recovery-") ||
-        jobId.startsWith("offline-")) &&
-      typeof window !== "undefined"
-    ) {
-      const mockJobData = localStorage.getItem(`mock-job-${jobId}`)
-      if (mockJobData) {
-        const parsedData = JSON.parse(mockJobData)
-        return {
-          jobId,
-          status: parsedData.status,
-          progress: parsedData.status === "pending" ? 30 : parsedData.status === "processing" ? 70 : 100,
-          result: parsedData.result,
-        }
-      }
-      return {
-        jobId,
-        status: "processing",
-        progress: 50,
-      }
-    }
-    if (isOffline()) {
-      return {
-        jobId,
-        status: "processing",
-        progress: 70,
-      }
-    }
-    // Use projectId as query param
-    const url = projectId
-      ? `${API_ENDPOINTS.GENERATE.ASYNC_STATUS(jobId)}?projectId=${encodeURIComponent(projectId)}`
-      : API_ENDPOINTS.GENERATE.ASYNC_STATUS(jobId)
-    const response = await fetch(url, {
-      headers: {
-        ...(typeof localStorage !== "undefined" && localStorage.getItem("token")
-          ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
-          : {}),
-      },
-    })
-    if (!response.ok) {
-      const errorText = await response.text()
-      if (response.status === 404) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem(
-            `mock-job-${jobId}`,
-            JSON.stringify({ status: "processing", createdAt: Date.now() })
-          )
-          setTimeout(() => {
-            localStorage.setItem(
-              `mock-job-${jobId}`,
-              JSON.stringify({
-                status: "completed",
-                result: {
-                  content: `# Documentation Recovery\n\nThe original documentation job could not be found. This is a fallback documentation.`,
-                },
-                completedAt: Date.now(),
-              })
-            )
-          }, 3000)
-        }
-        return { jobId, status: "processing", progress: 50 }
-      }
-      throw new Error(`API returned ${response.status}: ${errorText}`)
-    }
-    const responseData = await response.json()
-    if (!responseData.jobId && !responseData.id && !responseData._id) {
-      responseData.jobId = jobId
-    } else {
-      responseData.jobId = responseData.jobId || responseData.id || responseData._id
-    }
-    if (!responseData.status) {
-      responseData.status = "processing"
-    }
-    if (!["pending", "processing", "completed", "failed"].includes(responseData.status)) {
-      responseData.status = "processing"
-    }
-    if (responseData.progress === undefined) {
-      if (responseData.status === "completed") {
-        responseData.progress = 100
-      } else if (responseData.status === "failed") {
-        responseData.progress = 0
-      } else {
-        responseData.progress = 50
-      }
-    }
-    return responseData
+    const response = await apiClient.get<AsyncJobResponse>(API_ENDPOINTS.GENERATE.ASYNC_STATUS(jobId, projectId || ''));
+    return response;
   } catch (error) {
-    return {
-      jobId,
-      status: "processing",
-      progress: 50,
-    }
+    console.error("Error checking job status:", error);
+    throw error instanceof ApiError ? error : new ApiError("Failed to check job status", 500);
   }
 }
 
@@ -1076,10 +988,13 @@ export async function generateLowLevelDocumentation({
 }
 
 // Generate Infrastructure as Code
-export const generateIaC = async (request: GenerateIaCRequest): Promise<GenerateIaCResponse> => {
+export const generateIaC = async (request: GenerateIaCRequest): Promise<{ jobId: string }> => {
   try {
     console.log("Generating IaC with request:", request);
-    const response = await apiClient.post<GenerateIaCResponse>(API_ENDPOINTS.GENERATE.IAC, request);
+    const response = await apiClient.post<{ jobId: string }>(API_ENDPOINTS.GENERATE.IAC, {
+      ...request,
+      async: true // Add async flag
+    });
     console.log("IaC generation response:", response);
     return response;
   } catch (error) {
@@ -1105,7 +1020,7 @@ export async function deployInfrastructure({ code, projectId }: DeployRequest): 
 export const generateAppCode = async (request: GenerateAppCodeRequest): Promise<AppCodeResponse> => {
   try {
     console.log("Generating application code with request:", request);
-    const response = await apiClient.post<AppCodeResponse>(`${API_ENDPOINTS.GENERATE.IAC}/app`, request);
+    const response = await apiClient.post<AppCodeResponse>(API_ENDPOINTS.GENERATE.APP_CODE, request);
     console.log("Application code generation response:", response);
     return response;
   } catch (error) {
@@ -1116,7 +1031,6 @@ export const generateAppCode = async (request: GenerateAppCodeRequest): Promise<
 
 const DIAGRAM_TYPES = {
   CLASS: "class",
-  ERD: "erd",
   SEQUENCE: "sequence",
   ARCHITECTURE: "architecture",
   COMPONENT: "component",
@@ -1127,7 +1041,6 @@ function mapDiagramType(frontendType: string): string {
   const type = frontendType.toLowerCase().replace(/\s+/g, "")
 
   if (type.includes("class")) return DIAGRAM_TYPES.CLASS
-  if (type.includes("erd")) return DIAGRAM_TYPES.ERD
   if (type.includes("sequence")) return DIAGRAM_TYPES.SEQUENCE
   if (type.includes("architecture")) return DIAGRAM_TYPES.ARCHITECTURE
   if (type.includes("component")) return DIAGRAM_TYPES.COMPONENT
@@ -1199,5 +1112,5 @@ function generateMockDocumentationContent(
 
   content += `## Future Enhancements\n\n- Integration with additional third-party services\n- Implementation of a recommendation system\n- Addition of advanced analytics capabilities\n- Support for multiple languages and regions\n\n`
 
-  return content
+  return content;
 }
