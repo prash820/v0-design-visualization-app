@@ -96,31 +96,31 @@ body {
 
 @layer base {
   :root {
-    /* Deep Space & Neural Network Theme */
+    /* Deep Space & AI Theme - Light text for dark backgrounds */
     --background: 220 27% 8%; /* Deep space black #0a0f1c */
-    --foreground: 210 40% 95%; /* Neural white #f1f5f9 */
-    --card: 220 25% 12%; /* Dark neural #1a2332 */
-    --card-foreground: 210 40% 95%;
+    --foreground: 210 40% 95%; /* Light text #f1f5f9 */
+    --card: 220 25% 12%; /* Dark card #1a2332 */
+    --card-foreground: 210 40% 95%; /* Light text on cards */
     --popover: 220 25% 12%;
     --popover-foreground: 210 40% 95%;
     --primary: 188 100% 42%; /* Electric cyan #00b4d8 */
-    --primary-foreground: 220 27% 8%;
-    --secondary: 271 81% 56%; /* Neural purple #8b5cf6 */
-    --secondary-foreground: 210 40% 95%;
-    --muted: 220 20% 15%; /* Muted neural #242938 */
-    --muted-foreground: 210 20% 70%;
-    --accent: 158 64% 52%; /* Quantum green #10b981 */
-    --accent-foreground: 220 27% 8%;
-    --destructive: 0 72% 51%; /* Plasma red #dc2626 */
+    --primary-foreground: 220 27% 8%; /* Dark text on primary */
+    --secondary: 271 81% 56%; /* Purple #8b5cf6 */
+    --secondary-foreground: 210 40% 95%; /* Light text on secondary */
+    --muted: 220 20% 15%; /* Muted background #242938 */
+    --muted-foreground: 210 30% 80%; /* Lighter muted text */
+    --accent: 158 64% 52%; /* Green #10b981 */
+    --accent-foreground: 220 27% 8%; /* Dark text on accent */
+    --destructive: 0 72% 51%; /* Red #dc2626 */
     --destructive-foreground: 210 40% 95%;
-    --border: 220 20% 18%; /* Neural border #2d3748 */
+    --border: 220 20% 18%; /* Border #2d3748 */
     --input: 220 20% 18%;
     --ring: 188 100% 42%;
     --chart-1: 188 100% 42%; /* Electric cyan */
-    --chart-2: 158 64% 52%; /* Quantum green */
-    --chart-3: 271 81% 56%; /* Neural purple */
-    --chart-4: 45 93% 58%; /* Holographic gold #fbbf24 */
-    --chart-5: 14 91% 60%; /* Plasma orange #f97316 */
+    --chart-2: 158 64% 52%; /* Green */
+    --chart-3: 271 81% 56%; /* Purple */
+    --chart-4: 45 93% 58%; /* Gold #fbbf24 */
+    --chart-5: 14 91% 60%; /* Orange #f97316 */
     --radius: 0.75rem;
     --sidebar-background: 220 25% 12%;
     --sidebar-foreground: 210 40% 95%;
@@ -133,22 +133,22 @@ body {
   }
 
   .dark {
-    /* Enhanced dark mode for even deeper space feel */
+    /* Enhanced dark mode with even better contrast */
     --background: 220 30% 6%; /* Deeper space #080d18 */
-    --foreground: 210 40% 98%; /* Brighter neural white */
-    --card: 220 28% 10%; /* Darker neural #141a26 */
+    --foreground: 210 40% 98%; /* Very light text */
+    --card: 220 28% 10%; /* Darker card #141a26 */
     --card-foreground: 210 40% 98%;
     --popover: 220 28% 10%;
     --popover-foreground: 210 40% 98%;
-    --primary: 188 100% 45%; /* Brighter electric cyan */
+    --primary: 188 100% 45%; /* Brighter cyan */
     --primary-foreground: 220 30% 6%;
-    --secondary: 271 81% 60%; /* Brighter neural purple */
+    --secondary: 271 81% 60%; /* Brighter purple */
     --secondary-foreground: 210 40% 98%;
     --muted: 220 25% 12%; /* Darker muted */
-    --muted-foreground: 210 25% 75%;
-    --accent: 158 64% 55%; /* Brighter quantum green */
+    --muted-foreground: 210 25% 85%; /* Much lighter muted text */
+    --accent: 158 64% 55%; /* Brighter green */
     --accent-foreground: 220 30% 6%;
-    --destructive: 0 75% 55%; /* Brighter plasma red */
+    --destructive: 0 75% 55%; /* Brighter red */
     --destructive-foreground: 210 40% 98%;
     --border: 220 25% 15%; /* Darker border */
     --input: 220 25% 15%;

@@ -965,11 +965,11 @@ function InputStep({ content, progress }: { content: any; progress: number }) {
         <div>
           <h3 className="text-lg font-semibold mb-4">💬 System Description</h3>
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 min-h-[200px]">
-            <div className="font-mono text-sm">
+            <div className="font-mono text-sm text-foreground">
               {typedText}
               {progress < 100 && (
                 <motion.span
-                  className="inline-block w-0.5 h-4 bg-blue-500 ml-1"
+                  className="inline-block w-0.5 h-4 bg-primary ml-1"
                   animate={{ opacity: [1, 0, 1] }}
                   transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1 }}
                 />
@@ -990,14 +990,14 @@ function InputStep({ content, progress }: { content: any; progress: number }) {
                   x: 0,
                 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded"
+                className="flex items-center gap-2 p-2 bg-card/50 border border-border rounded"
               >
                 {progress > (index / content.features.length) * 100 ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
                   <div className="h-4 w-4 border-2 border-gray-300 rounded-full" />
                 )}
-                <span className="text-sm">{feature}</span>
+                <span className="text-sm text-foreground">{feature}</span>
               </motion.div>
             ))}
           </div>
@@ -1030,7 +1030,7 @@ function ProcessingStep({ content, progress }: { content: any; progress: number 
               opacity: index <= currentStepIndex ? 1 : 0.3,
               x: 0,
             }}
-            className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+            className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border border-border"
           >
             {index < currentStepIndex ? (
               <CheckCircle className="h-5 w-5 text-green-500" />
@@ -1039,7 +1039,9 @@ function ProcessingStep({ content, progress }: { content: any; progress: number 
             ) : (
               <div className="h-5 w-5 border-2 border-gray-300 rounded-full" />
             )}
-            <span className={index <= currentStepIndex ? "font-medium" : "text-gray-500"}>{step}</span>
+            <span className={index <= currentStepIndex ? "font-medium text-foreground" : "text-muted-foreground"}>
+              {step}
+            </span>
           </motion.div>
         ))}
       </div>
