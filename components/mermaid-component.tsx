@@ -123,83 +123,73 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
           startOnLoad: false,
           theme: "base",
           themeVariables: {
-            // Force all text to be dark
-            primaryTextColor: "#000000",
-            textColor: "#000000",
-            nodeTextColor: "#000000",
-            classText: "#000000",
-            noteTextColor: "#000000",
-            actorTextColor: "#000000",
-            labelTextColor: "#000000",
-            loopTextColor: "#000000",
-            activationTextColor: "#000000",
-            sequenceNumberColor: "#000000",
-            sectionTextColor: "#000000",
-            altTextColor: "#000000",
-            optTextColor: "#000000",
-
-            // Background colors
-            primaryColor: "#FFD6A5",
-            primaryBorderColor: "#FFB86B",
+            primaryColor: "#FFD6A5", // Pastel orange
+            primaryTextColor: "#1a1a1a", // Much darker text
+            primaryBorderColor: "#FFB86B", // Soft orange border
             lineColor: "#FFB86B",
             fontFamily: "'Inter', 'Segoe UI', 'Arial', sans-serif",
             fontSize: className?.includes("scale-75") ? "12px" : "14px",
-
-            // Node and shape colors
-            mainBkg: "#ffffff",
-            secondaryColor: "#f8f9fa",
-            tertiaryColor: "#e9ecef",
-            background: "#ffffff",
-
-            // Class diagram specific
-            classText: "#000000",
-
-            // Sequence diagram specific
-            actorBkg: "#FFF5E1",
-            actorBorder: "#FFB86B",
-            actorTextColor: "#000000",
-            signalColor: "#FFB86B",
-            signalTextColor: "#000000",
-
-            // Flowchart specific
-            clusterBkg: "#FFF5E1",
-            clusterBorder: "#FFB86B",
             edgeLabelBackground: "#fff",
-
-            // Notes and labels
+            clusterBkg: "#FFF5E1", // Lighter orange background
+            clusterBorder: "#FFB86B",
+            nodeBorder: "#FFB86B",
+            nodeTextColor: "#1a1a1a", // Dark text for nodes
+            background: "#FFF8F1",
+            actorBorder: "#FFB86B",
+            actorBkg: "#FFF5E1",
+            signalColor: "#FFB86B",
+            classText: "#1a1a1a", // Dark text for classes
             labelBoxBkgColor: "#fff",
             labelBoxBorderColor: "#FFD6A5",
             noteBkgColor: "#FFF5E1",
             noteBorderColor: "#FFB86B",
-            noteTextColor: "#000000",
+            noteTextColor: "#1a1a1a", // Dark text for notes
+            // Additional text color properties
+            textColor: "#1a1a1a", // General text color
+            mainBkg: "#ffffff", // White background for diagram elements
+            secondaryColor: "#f8f9fa",
+            tertiaryColor: "#e9ecef",
+            // Make nodes rounded
+            nodeRadius: "8",
           },
+          // Add specific config for better rendering in constrained spaces
+          flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true,
+            curve: "basis",
+            diagramPadding: className?.includes("scale-75") ? 4 : 8,
+          },
+          sequence: {
+            useMaxWidth: true,
+            wrap: true,
+            width: className?.includes("scale-75") ? 120 : 150,
+          },
+          class: {
+            useMaxWidth: true,
+          },
+          // Add this to make diagrams more compact
+          htmlLabels: true,
+          gantt: {
+            useMaxWidth: true,
+          },
+          architecture: {
+            padding: 132, // Try increasing for more whitespace
+            iconSize: 148, // Try increasing/decreasing for icon clarity
+            fontSize: 118,
+          },
+          // Suppress error rendering in DOM
+          suppressErrorRendering: true,
         })
 
-        // Force dark text with CSS overrides
-        const style = document.createElement("style")
-        style.textContent = `
-  .mermaid-diagram text,
-  .mermaid-diagram .node text,
-  .mermaid-diagram .label text,
-  .mermaid-diagram .edgeLabel text,
-  .mermaid-diagram .actor text,
-  .mermaid-diagram .messageText,
-  .mermaid-diagram .noteText,
-  .mermaid-diagram .loopText,
-  .mermaid-diagram .labelText {
-    fill: #000000 !important;
-    color: #000000 !important;
-  }
-  
-  .mermaid-diagram .cluster text {
-    fill: #000000 !important;
-  }
-  
-  .mermaid-diagram .titleText {
-    fill: #000000 !important;
-  }
-`
-        document.head.appendChild(style)
+        // Register the 'logos' icon pack for architecture diagrams
+        if (mermaidAPI.registerIconPacks) {
+          mermaidAPI.registerIconPacks([
+            {
+              name: "logos",
+              loader: () => import("@iconify-json/logos").then((module) => module.icons),
+            },
+          ])
+        }
 
         // Generate a unique ID for this render
         const diagramId = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
