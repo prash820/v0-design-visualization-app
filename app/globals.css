@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 @layer utilities {
@@ -25,77 +25,142 @@ body {
       transform: scale(1);
     }
   }
+
+  /* Futuristic glow effects */
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 40px rgba(6, 182, 212, 0.1);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3), 0 0 40px rgba(147, 51, 234, 0.1);
+  }
+
+  .glow-neural {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.2), 0 0 60px rgba(16, 185, 129, 0.1);
+  }
+
+  /* Neural network animation */
+  .neural-bg {
+    background: radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+  }
+
+  /* Holographic text effect */
+  .holographic {
+    background: linear-gradient(45deg, #06b6d4, #8b5cf6, #10b981, #06b6d4);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: holographic 3s ease-in-out infinite;
+  }
+
+  @keyframes holographic {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  /* Quantum particle effect */
+  .quantum-particles::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(2px 2px at 20px 30px, rgba(6, 182, 212, 0.3), transparent),
+      radial-gradient(2px 2px at 40px 70px, rgba(147, 51, 234, 0.3), transparent),
+      radial-gradient(1px 1px at 90px 40px, rgba(16, 185, 129, 0.3), transparent),
+      radial-gradient(1px 1px at 130px 80px, rgba(6, 182, 212, 0.3), transparent);
+    background-repeat: repeat;
+    background-size: 150px 100px;
+    animation: quantum-drift 20s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes quantum-drift {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(-150px, -100px);
+    }
+  }
 }
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* #FFFFFF */
-    --foreground: 220 13% 10%; /* #1E1E1E */
-    --card: 210 20% 98%; /* #F8F9FA */
-    --card-foreground: 220 13% 10%; /* #1E1E1E */
-    --popover: 210 20% 98%;
-    --popover-foreground: 220 13% 10%;
-    --primary: 211 59% 53%; /* #3B86D1 Electric Blue */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF */
-    --secondary: 340 100% 66%; /* #FF4D6B Hot Pink */
-    --secondary-foreground: 0 0% 100%;
-    --muted: 210 16% 93%; /* #E5EAF1 */
-    --muted-foreground: 220 13% 40%;
-    --accent: 133 74% 40%; /* #21BF06 Neon Green */
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%; /* #FF4D6B reused for destructive */
-    --destructive-foreground: 0 0% 100%;
-    --border: 210 16% 85%; /* #D1D5DB */
-    --input: 210 16% 85%;
-    --ring: 211 59% 53%;
-    --chart-1: 211 59% 53%; /* #3B86D1 */
-    --chart-2: 133 74% 40%; /* #21BF06 */
-    --chart-3: 340 100% 66%; /* #FF4D6B */
-    --chart-4: 48 97% 63%; /* #FFD600 (Yellow) */
-    --chart-5: 31 100% 50%; /* #FF9900 (Orange) */
-    --radius: 0.5rem;
-    --sidebar-background: 211 59% 53%; /* #3B86D1 */
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 133 74% 40%; /* #21BF06 */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 340 100% 66%; /* #FF4D6B */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 210 16% 85%;
-    --sidebar-ring: 48 97% 63%; /* #FFD600 */
+    /* Deep Space & Neural Network Theme */
+    --background: 220 27% 8%; /* Deep space black #0a0f1c */
+    --foreground: 210 40% 95%; /* Neural white #f1f5f9 */
+    --card: 220 25% 12%; /* Dark neural #1a2332 */
+    --card-foreground: 210 40% 95%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 210 40% 95%;
+    --primary: 188 100% 42%; /* Electric cyan #00b4d8 */
+    --primary-foreground: 220 27% 8%;
+    --secondary: 271 81% 56%; /* Neural purple #8b5cf6 */
+    --secondary-foreground: 210 40% 95%;
+    --muted: 220 20% 15%; /* Muted neural #242938 */
+    --muted-foreground: 210 20% 70%;
+    --accent: 158 64% 52%; /* Quantum green #10b981 */
+    --accent-foreground: 220 27% 8%;
+    --destructive: 0 72% 51%; /* Plasma red #dc2626 */
+    --destructive-foreground: 210 40% 95%;
+    --border: 220 20% 18%; /* Neural border #2d3748 */
+    --input: 220 20% 18%;
+    --ring: 188 100% 42%;
+    --chart-1: 188 100% 42%; /* Electric cyan */
+    --chart-2: 158 64% 52%; /* Quantum green */
+    --chart-3: 271 81% 56%; /* Neural purple */
+    --chart-4: 45 93% 58%; /* Holographic gold #fbbf24 */
+    --chart-5: 14 91% 60%; /* Plasma orange #f97316 */
+    --radius: 0.75rem;
+    --sidebar-background: 220 25% 12%;
+    --sidebar-foreground: 210 40% 95%;
+    --sidebar-primary: 188 100% 42%;
+    --sidebar-primary-foreground: 220 27% 8%;
+    --sidebar-accent: 271 81% 56%;
+    --sidebar-accent-foreground: 210 40% 95%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 158 64% 52%;
   }
+
   .dark {
-    --background: 220 13% 10%; /* #1E1E1E */
-    --foreground: 0 0% 100%; /* #FFFFFF */
-    --card: 220 13% 15%; /* #23272F */
-    --card-foreground: 0 0% 100%;
-    --popover: 220 13% 15%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 211 59% 53%; /* #3B86D1 Electric Blue */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 340 100% 66%; /* #FF4D6B Hot Pink */
-    --secondary-foreground: 0 0% 100%;
-    --muted: 220 13% 20%; /* #2D3748 */
-    --muted-foreground: 0 0% 100%;
-    --accent: 133 74% 40%; /* #21BF06 Neon Green */
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%; /* #FF4D6B */
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 25%; /* #4B5563 */
-    --input: 220 13% 25%;
-    --ring: 211 59% 53%;
-    --chart-1: 211 59% 53%; /* #3B86D1 */
-    --chart-2: 133 74% 40%; /* #21BF06 */
-    --chart-3: 340 100% 66%; /* #FF4D6B */
-    --chart-4: 48 97% 63%; /* #FFD600 */
-    --chart-5: 31 100% 50%; /* #FF9900 */
-    --sidebar-background: 220 13% 15%; /* #23272F */
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 211 59% 53%; /* #3B86D1 */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 133 74% 40%; /* #21BF06 */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 13% 25%;
-    --sidebar-ring: 48 97% 63%; /* #FFD600 */
+    /* Enhanced dark mode for even deeper space feel */
+    --background: 220 30% 6%; /* Deeper space #080d18 */
+    --foreground: 210 40% 98%; /* Brighter neural white */
+    --card: 220 28% 10%; /* Darker neural #141a26 */
+    --card-foreground: 210 40% 98%;
+    --popover: 220 28% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 188 100% 45%; /* Brighter electric cyan */
+    --primary-foreground: 220 30% 6%;
+    --secondary: 271 81% 60%; /* Brighter neural purple */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 25% 12%; /* Darker muted */
+    --muted-foreground: 210 25% 75%;
+    --accent: 158 64% 55%; /* Brighter quantum green */
+    --accent-foreground: 220 30% 6%;
+    --destructive: 0 75% 55%; /* Brighter plasma red */
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 25% 15%; /* Darker border */
+    --input: 220 25% 15%;
+    --ring: 188 100% 45%;
+    --sidebar-background: 220 28% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 188 100% 45%;
+    --sidebar-primary-foreground: 220 30% 6%;
+    --sidebar-accent: 271 81% 60%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 220 25% 15%;
+    --sidebar-ring: 158 64% 55%;
   }
 }
 
@@ -105,6 +170,8 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 25% 25%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(147, 51, 234, 0.05) 0%, transparent 50%);
   }
 }
 

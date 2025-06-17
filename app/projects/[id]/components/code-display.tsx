@@ -1,23 +1,18 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AppCodeResponse } from "@/lib/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import hljs from 'highlight.js';
-import 'highlight.js/styles/github-dark.css';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { AppCodeResponse } from "@/lib/types"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface CodeDisplayProps {
-  code: AppCodeResponse;
+  code: AppCodeResponse
 }
 
 export function CodeDisplay({ code }: CodeDisplayProps) {
   const highlightCode = (code: string, language: string) => {
-    try {
-      return hljs.highlight(code, { language }).value;
-    } catch (error) {
-      return code;
-    }
-  };
+    // In v0 environment, just return the plain code
+    // In production, this would use highlight.js
+    return code
+  }
 
   return (
     <Card className="w-full">
@@ -45,13 +40,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
                   {Object.entries(code.frontend.components).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="rounded-md overflow-hidden">
-                        <code
-                          className="language-typescript"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCode(content, 'typescript'),
-                          }}
-                        />
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                        <code>{content}</code>
                       </pre>
                     </div>
                   ))}
@@ -63,13 +53,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
                   {Object.entries(code.frontend.pages).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="rounded-md overflow-hidden">
-                        <code
-                          className="language-typescript"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCode(content, 'typescript'),
-                          }}
-                        />
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                        <code>{content}</code>
                       </pre>
                     </div>
                   ))}
@@ -81,13 +66,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
                   {Object.entries(code.frontend.utils).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="rounded-md overflow-hidden">
-                        <code
-                          className="language-typescript"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCode(content, 'typescript'),
-                          }}
-                        />
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                        <code>{content}</code>
                       </pre>
                     </div>
                   ))}
@@ -110,13 +90,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
                   {Object.entries(code.backend.controllers).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="rounded-md overflow-hidden">
-                        <code
-                          className="language-typescript"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCode(content, 'typescript'),
-                          }}
-                        />
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                        <code>{content}</code>
                       </pre>
                     </div>
                   ))}
@@ -128,13 +103,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
                   {Object.entries(code.backend.models).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="rounded-md overflow-hidden">
-                        <code
-                          className="language-typescript"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCode(content, 'typescript'),
-                          }}
-                        />
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                        <code>{content}</code>
                       </pre>
                     </div>
                   ))}
@@ -146,13 +116,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
                   {Object.entries(code.backend.routes).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="rounded-md overflow-hidden">
-                        <code
-                          className="language-typescript"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCode(content, 'typescript'),
-                          }}
-                        />
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                        <code>{content}</code>
                       </pre>
                     </div>
                   ))}
@@ -164,13 +129,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
                   {Object.entries(code.backend.utils).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="rounded-md overflow-hidden">
-                        <code
-                          className="language-typescript"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCode(content, 'typescript'),
-                          }}
-                        />
+                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                        <code>{content}</code>
                       </pre>
                     </div>
                   ))}
@@ -182,13 +142,8 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
           <TabsContent value="documentation">
             <ScrollArea className="h-[600px] rounded-md border p-4">
               <div className="prose prose-invert max-w-none">
-                <pre className="rounded-md overflow-hidden">
-                  <code
-                    className="language-markdown"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightCode(code.documentation, 'markdown'),
-                    }}
-                  />
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
+                  <code>{code.documentation}</code>
                 </pre>
               </div>
             </ScrollArea>
@@ -196,5 +151,5 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
         </Tabs>
       </CardContent>
     </Card>
-  );
+  )
 }

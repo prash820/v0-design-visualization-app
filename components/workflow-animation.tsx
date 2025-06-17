@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { BarChart2, FileText, Server, Rocket, ArrowRight, CheckCircle, Loader2, Zap } from "lucide-react"
+import { BarChart2, FileText, Server, Rocket, ArrowRight, CheckCircle, Loader2, Zap, Code2 } from "lucide-react"
 import Mermaid from "@/components/mermaid-component"
 
 // Define the workflow steps with better visual representation
@@ -243,6 +243,104 @@ module "order_service" {
 }`,
   },
   {
+    id: "application",
+    title: "Generate Application Code",
+    icon: <Code2 className="h-4 w-4" />,
+    color: "bg-orange-600",
+    code: `// E-Commerce Frontend - ProductList.tsx
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  imageUrl: string;
+  inStock: boolean;
+}
+
+export default function ProductList() {
+  const { user } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products', {
+        headers: {
+          'Authorization': \`Bearer \${user?.token}\`
+        }
+      });
+      const data = await response.json();
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addToCart = async (productId: string) => {
+    try {
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': \`Bearer \${user?.token}\`
+        },
+        body: JSON.stringify({ productId, quantity: 1 })
+      });
+      
+      if (response.ok) {
+        setCart([...cart, productId]);
+      }
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
+  };
+
+  if (loading) return <div className="text-center p-8">Loading products...</div>;
+
+  return (
+    <div className="max-w-6xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-8">Products</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products.map(product => (
+          <div key={product.id} className="border rounded-lg p-4 shadow-md">
+            <img 
+              src={product.imageUrl || "/placeholder.svg"} 
+              alt={product.name}
+              className="w-full h-48 object-cover rounded mb-4"
+            />
+            <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
+            <p className="text-gray-600 mb-4">{product.description}</p>
+            <div className="flex justify-between items-center">
+              <span className="text-2xl font-bold text-green-600">
+                \${product.price}
+              </span>
+              <button
+                onClick={() => addToCart(product.id)}
+                disabled={!product.inStock}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}`,
+  },
+  {
     id: "deployment",
     title: "Deploy to Cloud",
     icon: <Rocket className="h-4 w-4" />,
@@ -295,7 +393,7 @@ export default function WorkflowAnimation() {
 
   // Handle deployment progress animation
   useEffect(() => {
-    if (currentStep === 5) {
+    if (currentStep === workflowSteps.length - 1) {
       const interval = setInterval(() => {
         setDeploymentProgress((prev) => {
           if (prev >= 100) {
@@ -351,7 +449,7 @@ export default function WorkflowAnimation() {
           }, 1000)
         }
       },
-      currentStep === 0 ? 3000 : currentStep === 1 ? 4000 : currentStep === 5 ? 8000 : 5000,
+      currentStep === 0 ? 3000 : currentStep === 1 ? 4000 : currentStep === workflowSteps.length - 1 ? 8000 : 5000,
     )
 
     return () => clearTimeout(timeout)
@@ -361,7 +459,10 @@ export default function WorkflowAnimation() {
 
   // Auto-scroll function for content areas - Fixed to work for all scrollable sections
   useEffect(() => {
-    if (contentRef.current && (currentStep === 2 || currentStep === 3 || currentStep === 4 || currentStep === 5)) {
+    if (
+      contentRef.current &&
+      (currentStep === 2 || currentStep === 3 || currentStep === 4 || currentStep === 5 || currentStep === 6)
+    ) {
       const scrollContent = () => {
         if (!contentRef.current || !isAnimating) return
 
@@ -375,7 +476,10 @@ export default function WorkflowAnimation() {
           let currentScroll = 0
 
           const scrollInterval = setInterval(() => {
-            if (!isAnimating || (currentStep !== 2 && currentStep !== 3 && currentStep !== 4 && currentStep !== 5)) {
+            if (
+              !isAnimating ||
+              (currentStep !== 2 && currentStep !== 3 && currentStep !== 4 && currentStep !== 5 && currentStep !== 6)
+            ) {
               clearInterval(scrollInterval)
               return
             }
@@ -558,7 +662,7 @@ export default function WorkflowAnimation() {
                   <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     AI-Powered Development Workflow
                   </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 max-w-lg">
+                  <p className="text-sm text-gray-900 dark:text-gray-100 max-w-lg font-medium">
                     Watch how VisualizeAI transforms a simple description into a complete, production-ready application
                   </p>
                   <div className="grid grid-cols-5 gap-2 mt-6">
@@ -752,71 +856,7 @@ export default function WorkflowAnimation() {
                           </h2>
                           <p className="text-xs text-gray-700 dark:text-gray-300">
                             Each microservice is containerized using Docker and deployed on Amazon ECS for scalability
-                            and reliability.
                           </p>
-
-                          <h3 className="text-xs font-semibold text-purple-500 mt-2">Database Strategy</h3>
-                          <p className="text-xs text-gray-700 dark:text-gray-300">
-                            Each service maintains its own database to ensure loose coupling and independent scaling.
-                          </p>
-
-                          <h3 className="text-xs font-semibold text-purple-500 mt-2">API Design</h3>
-                          <p className="text-xs text-gray-700 dark:text-gray-300">
-                            RESTful APIs with OpenAPI specifications for clear documentation and client generation.
-                          </p>
-
-                          <h2 className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-3">
-                            📈 Performance Considerations
-                          </h2>
-                          <ul className="space-y-1">
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              Horizontal scaling with auto-scaling groups
-                            </li>
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              Redis caching for frequently accessed data
-                            </li>
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              CDN integration for static assets
-                            </li>
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              Database read replicas for improved performance
-                            </li>
-                          </ul>
-
-                          <h2 className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-3">
-                            🚀 Deployment Pipeline
-                          </h2>
-                          <p className="text-xs text-gray-700 dark:text-gray-300">
-                            Automated CI/CD pipeline using GitHub Actions with blue-green deployment strategy.
-                          </p>
-
-                          <h3 className="text-xs font-semibold text-purple-500 mt-2">Testing Strategy</h3>
-                          <ul className="space-y-1">
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              Unit tests with 90%+ coverage
-                            </li>
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              Integration tests for API endpoints
-                            </li>
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              End-to-end tests for critical user flows
-                            </li>
-                            <li className="text-xs text-gray-700 dark:text-gray-300 ml-3 list-disc">
-                              Load testing for performance validation
-                            </li>
-                          </ul>
-
-                          <h2 className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-3">
-                            🔒 Security Implementation
-                          </h2>
-                          <p className="text-xs text-gray-700 dark:text-gray-300">
-                            Multi-layered security approach with authentication, authorization, and data protection.
-                          </p>
-
-                          <div className="mt-4 p-2 bg-purple-100 dark:bg-purple-900/30 rounded text-xs">
-                            <strong>Note:</strong> This documentation is automatically generated and updated as your
-                            architecture evolves.
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -824,8 +864,8 @@ export default function WorkflowAnimation() {
                 </div>
                 <div className="mt-2 flex justify-between items-center">
                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                    <span className="text-purple-600 font-semibold">📖 Technical Documentation</span> generated from
-                    your architecture
+                    <span className="text-purple-600 font-semibold">✨ Comprehensive Documentation</span> generated
+                    automatically
                   </div>
                   <motion.button
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 font-semibold shadow-lg text-xs"
@@ -845,24 +885,69 @@ export default function WorkflowAnimation() {
                   <div className="p-1 bg-pink-600 rounded-full text-white">
                     <Server className="h-4 w-4" />
                   </div>
-                  <h3 className="text-lg font-bold">🏗️ Infrastructure as Code</h3>
+                  <h3 className="text-lg font-bold">☁️ Generated Infrastructure</h3>
                 </div>
                 <div className="flex-1 border-2 border-pink-200 dark:border-pink-900 rounded-xl p-3 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/30 dark:to-rose-950/30 overflow-hidden">
                   <div className="h-full bg-gray-900 rounded-lg overflow-hidden">
-                    <div ref={contentRef} className="h-full overflow-y-auto overflow-x-auto p-3">
-                      <pre className="text-xs font-mono text-green-400 whitespace-pre-wrap min-h-[300px]">
-                        <code>{step.code}</code>
-                      </pre>
+                    <div
+                      ref={contentRef}
+                      className="h-full overflow-y-auto overflow-x-hidden p-3"
+                      style={{ maxHeight: "100%", overflowY: "auto" }}
+                    >
+                      <div className="font-mono text-xs leading-relaxed text-green-400">
+                        {step.code.split("\n").map((line, i) => (
+                          <div key={i}>{line}</div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div className="mt-2 flex justify-between items-center">
                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                    <span className="text-pink-600 font-semibold">☁️ AWS Terraform</span> infrastructure ready for
-                    deployment
+                    <span className="text-pink-600 font-semibold">✨ AWS Infrastructure</span> automatically generated
                   </div>
                   <motion.button
                     className="px-4 py-2 bg-pink-600 text-white rounded-lg flex items-center gap-2 font-semibold shadow-lg text-xs"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    Generate Application Code
+                    <ArrowRight className="h-3 w-3" />
+                  </motion.button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Application Code */}
+            {currentStep === 5 && (
+              <div className="h-full flex flex-col">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1 bg-orange-600 rounded-full text-white">
+                    <Code2 className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-lg font-bold">💻 Generated Application Code</h3>
+                </div>
+                <div className="flex-1 border-2 border-orange-200 dark:border-orange-900 rounded-xl p-3 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/30 dark:to-yellow-950/30 overflow-hidden">
+                  <div className="h-full bg-gray-900 rounded-lg overflow-hidden">
+                    <div
+                      ref={contentRef}
+                      className="h-full overflow-y-auto overflow-x-hidden p-3"
+                      style={{ maxHeight: "100%", overflowY: "auto" }}
+                    >
+                      <div className="font-mono text-xs leading-relaxed text-green-400">
+                        {step.code.split("\n").map((line, i) => (
+                          <div key={i}>{line}</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 flex justify-between items-center">
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <span className="text-orange-600 font-semibold">✨ React Frontend Code</span> automatically
+                    generated
+                  </div>
+                  <motion.button
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg flex items-center gap-2 font-semibold shadow-lg text-xs"
                     whileHover={{ scale: 1.05 }}
                   >
                     Deploy to Cloud
@@ -872,136 +957,41 @@ export default function WorkflowAnimation() {
               </div>
             )}
 
-            {/* Step 5: Deployment */}
-            {currentStep === 5 && (
+            {/* Step 6: Deployment */}
+            {currentStep === 6 && (
               <div className="h-full flex flex-col">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1 bg-rose-600 rounded-full text-white">
                     <Rocket className="h-4 w-4" />
                   </div>
-                  <h3 className="text-lg font-bold">🚀 Deploying to Production</h3>
+                  <h3 className="text-lg font-bold">🚀 Deploy to Cloud</h3>
                 </div>
-                <div className="flex-1 border-2 border-rose-200 dark:border-rose-900 rounded-xl p-4 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/30 dark:to-orange-950/30 overflow-hidden">
-                  <div ref={contentRef} className="h-full overflow-y-auto overflow-x-hidden">
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="font-semibold">Deployment Progress</span>
-                        <span className="font-mono">{Math.round(deploymentProgress)}%</span>
+                <div className="flex-1 border-2 border-rose-200 dark:border-rose-900 rounded-xl p-4 bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 overflow-hidden">
+                  <div className="flex flex-col h-full">
+                    {step.deployment.steps.map((s, index) => (
+                      <div key={index} className="flex items-center gap-3 text-sm mb-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 w-5 text-right">{index + 1}.</span>
+                        <span className="text-gray-700 dark:text-gray-300">{s}</span>
+                        {deploymentStep > index && <CheckCircle className="h-4 w-4 text-green-500" />}
+                        {deploymentStep === index && <Loader2 className="h-4 w-4 animate-spin" />}
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <motion.div
-                          className="bg-gradient-to-r from-rose-500 to-orange-500 h-2 rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${deploymentProgress}%` }}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 min-h-[200px]">
-                      {step.deployment.steps.map((deployStep, idx) => (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.3 }}
-                          className="flex items-center gap-2"
-                        >
-                          {idx <= deploymentStep ? (
-                            <CheckCircle
-                              className={`h-4 w-4 ${idx < deploymentStep ? "text-green-500" : "text-rose-500 animate-pulse"}`}
-                            />
-                          ) : (
-                            <div className="h-4 w-4 rounded-full border-2 border-gray-300 dark:border-gray-600"></div>
-                          )}
-                          <span
-                            className={`text-xs ${idx <= deploymentStep ? "text-gray-900 dark:text-gray-100 font-medium" : "text-gray-400"}`}
-                          >
-                            {deployStep}
-                          </span>
-                          {idx === deploymentStep && idx < step.deployment.steps.length - 1 && (
-                            <Loader2 className="h-3 w-3 animate-spin text-rose-500 ml-auto" />
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    {deploymentProgress === 100 && (
+                    ))}
+                    <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
                       <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-800 dark:text-green-200 flex items-center gap-2"
-                      >
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="font-medium text-xs">{step.deployment.status}</span>
-                      </motion.div>
-                    )}
+                        className="bg-green-500 h-2 rounded-full"
+                        style={{ width: `${deploymentProgress}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                      <div className="mt-3 text-sm font-medium text-green-600 dark:text-green-400">
+                        {step.deployment.status}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-2 flex justify-between items-center">
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                    <span className="text-rose-600 font-semibold">☁️ AWS Deployment</span> in progress
-                  </div>
-                  {deploymentProgress === 100 ? (
-                    <motion.button
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2 font-semibold shadow-lg text-xs"
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      🎉 View Live App
-                      <ArrowRight className="h-3 w-3" />
-                    </motion.button>
-                  ) : (
-                    <button className="px-4 py-2 bg-rose-600 text-white rounded-lg flex items-center gap-2 font-semibold opacity-75 text-xs">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Deploying...
-                    </button>
-                  )}
                 </div>
               </div>
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
-
-      {/* Controls */}
-      <div className="absolute bottom-2 right-2 flex gap-1">
-        <motion.button
-          onClick={() => setIsAnimating(!isAnimating)}
-          className="p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700 transition-colors shadow-lg"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          {isAnimating ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="6" y="4" width="4" height="16"></rect>
-              <rect x="14" y="4" width="4" height="16"></rect>
-            </svg>
-          ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-          )}
-        </motion.button>
       </div>
     </motion.div>
   )

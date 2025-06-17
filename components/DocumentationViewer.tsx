@@ -7,4 +7,4 @@ export default function DocumentationViewer() {
       DocumentationViewer is deprecated. Please use DocumentationRenderer for documentation rendering.
     </div>
   );
-} 
+}

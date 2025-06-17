@@ -8,6 +8,7 @@ const diagrams = [
   {
     title: "Class Diagram",
     prompt: "Design a blog system with users, posts and comments",
+    type: "diagram",
     diagram: `classDiagram
     class User {
         +String name
@@ -25,28 +26,205 @@ const diagrams = [
     color: "from-blue-600 to-indigo-700",
   },
   {
-    title: "Sequence Diagram",
-    prompt: "Create a user authentication flow",
-    diagram: `sequenceDiagram
-    participant U as User
-    participant A as App
-    participant S as Server
-    
-    U->>A: Enter credentials
-    A->>S: Validate login
-    S-->>A: Return token
-    A-->>U: Show dashboard`,
+    title: "Documentation",
+    prompt: "Generate comprehensive API documentation",
+    type: "documentation",
+    content: `# Blog API Documentation
+
+## Overview
+A RESTful API for managing blog posts, users, and comments.
+
+## Endpoints
+
+### Users
+- **GET** /api/users - Get all users
+- **POST** /api/users - Create new user
+- **GET** /api/users/:id - Get user by ID
+
+### Posts  
+- **GET** /api/posts - Get all posts
+- **POST** /api/posts - Create new post
+- **PUT** /api/posts/:id - Update post
+- **DELETE** /api/posts/:id - Delete post
+
+### Comments
+- **GET** /api/posts/:id/comments - Get post comments
+- **POST** /api/posts/:id/comments - Add comment
+
+## Authentication
+All endpoints require JWT token in Authorization header.`,
     color: "from-purple-600 to-pink-600",
   },
   {
-    title: "Architecture Diagram",
-    prompt: "Design a serverless web application",
-    diagram: `flowchart TB
-    A[Client] --> B[API Gateway]
-    B --> C[Lambda Functions]
-    C --> D[(Database)]
-    C --> E[S3 Storage]`,
+    title: "Infrastructure Code",
+    prompt: "Create AWS infrastructure with Terraform",
+    type: "code",
+    code: `# main.tf
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+# VPC
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name = "blog-vpc"
+  }
+}
+
+# Internet Gateway
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "blog-igw"
+  }
+}
+
+# ECS Cluster
+resource "aws_ecs_cluster" "main" {
+  name = "blog-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+}
+
+# RDS Database
+resource "aws_db_instance" "main" {
+  identifier = "blog-db"
+  engine     = "postgres"
+  engine_version = "15.4"
+  instance_class = "db.t3.micro"
+  allocated_storage = 20
+  
+  db_name  = "blogdb"
+  username = var.db_username
+  password = var.db_password
+  
+  skip_final_snapshot = true
+}`,
     color: "from-emerald-600 to-teal-700",
+  },
+  {
+    title: "Application Code",
+    prompt: "Generate a React blog app with authentication",
+    type: "code",
+    code: `// BlogApp.tsx
+import React, { useState, useEffect } from 'react';
+import { useAuth } from './hooks/useAuth';
+import { BlogPost } from './types';
+
+export default function BlogApp() {
+  const { user, logout } = useAuth();
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      const response = await fetch('/api/posts', {
+        headers: {
+          'Authorization': \`Bearer \${user?.token}\`
+        }
+      });
+      const data = await response.json();
+      setPosts(data);
+    } catch (error) {
+      console.error('Failed to fetch posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createPost = async (title: string, content: string) => {
+    try {
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': \`Bearer \${user?.token}\`
+        },
+        body: JSON.stringify({ title, content })
+      });
+      
+      if (response.ok) {
+        fetchPosts(); // Refresh posts
+      }
+    } catch (error) {
+      console.error('Failed to create post:', error);
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <header className="flex justify-between mb-8">
+        <h1 className="text-3xl font-bold">My Blog</h1>
+        <div className="flex items-center gap-4">
+          <span>Welcome, {user?.name}</span>
+          <button onClick={logout}>Logout</button>
+        </div>
+      </header>
+
+      <main>
+        {posts.map(post => (
+          <article key={post.id} className="mb-8 p-6 border rounded-lg">
+            <h2 className="text-xl font-semibold mb-2">{post.title}</h2>
+            <p className="text-gray-600 mb-4">{post.content}</p>
+            <div className="text-sm text-gray-500">
+              By {post.author} • {post.createdAt}
+            </div>
+          </article>
+        ))}
+      </main>
+    </div>
+  );
+}`,
+    color: "from-orange-600 to-red-600",
+  },
+  {
+    title: "Deploy to Cloud",
+    prompt: "Deploy the application to AWS",
+    type: "deployment",
+    content: `🚀 Deployment Status
+
+✅ Infrastructure provisioned
+✅ Database migrated  
+✅ Application built
+✅ Docker images pushed
+✅ ECS services deployed
+
+🌐 Your application is live at:
+https://blog-app.example.com
+
+📊 Deployment Summary:
+• Region: us-east-1
+• Environment: production
+• Instances: 2x t3.medium
+• Database: PostgreSQL 15.4
+• CDN: CloudFront enabled
+• SSL: Certificate issued
+
+⏱️ Deployment completed in 4m 32s`,
+    color: "from-green-600 to-blue-600",
   },
 ]
 
@@ -132,7 +310,9 @@ export default function HeroAnimationFramer() {
         {/* Input Section */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Describe your diagram:
+            {currentDiagram.type === "deployment"
+              ? "Deploy your application:"
+              : `Describe your ${currentDiagram.type === "code" ? "application" : currentDiagram.type}:`}
           </label>
           <div className="relative">
             <motion.textarea
@@ -174,16 +354,16 @@ export default function HeroAnimationFramer() {
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1, ease: "linear" }}
                 />
-                Generating...
+                {currentDiagram.type === "deployment" ? "Deploying..." : "Generating..."}
               </div>
             )}
-            {phase === "complete" && "Generated!"}
+            {phase === "complete" && (currentDiagram.type === "deployment" ? "Deployed!" : "Generated!")}
           </motion.button>
         </div>
 
-        {/* Diagram Section */}
+        {/* Content Section */}
         <motion.div
-          className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center"
+          className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden"
           animate={{
             borderColor: phase === "complete" ? "#10b981" : "#e5e7eb",
             boxShadow: phase === "complete" ? "0 0 0 2px rgba(16, 185, 129, 0.2)" : "none",
@@ -213,13 +393,35 @@ export default function HeroAnimationFramer() {
               </motion.div>
             ) : (
               <motion.div
-                key="diagram"
+                key="content"
                 className="w-full h-full p-2"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
               >
-                <Mermaid chart={currentDiagram.diagram} />
+                {currentDiagram.type === "code" ? (
+                  <div className="w-full h-full bg-gray-900 rounded-lg p-4 overflow-auto">
+                    <pre className="text-green-400 text-xs font-mono leading-relaxed whitespace-pre-wrap">
+                      {currentDiagram.code}
+                    </pre>
+                  </div>
+                ) : currentDiagram.type === "documentation" ? (
+                  <div className="w-full h-full bg-white rounded-lg p-4 overflow-auto">
+                    <div className="prose prose-sm max-w-none">
+                      <pre className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
+                        {currentDiagram.content}
+                      </pre>
+                    </div>
+                  </div>
+                ) : currentDiagram.type === "deployment" ? (
+                  <div className="w-full h-full bg-gray-900 rounded-lg p-4 overflow-auto">
+                    <pre className="text-green-400 text-sm font-mono leading-relaxed whitespace-pre-wrap">
+                      {currentDiagram.content}
+                    </pre>
+                  </div>
+                ) : (
+                  <Mermaid chart={currentDiagram.diagram} />
+                )}
               </motion.div>
             )}
           </AnimatePresence>
