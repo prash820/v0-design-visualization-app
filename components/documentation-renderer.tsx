@@ -44,8 +44,7 @@ const styledBlockquote = (text: string, label: string, color: string, icon: stri
 
 renderer.heading = function ({ text, depth }: { text: string; depth: number }) {
   const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
-  const base = `mt-${depth === 2 || depth === 3 ? '10' : '8'} mb-${depth === 2 || depth === 3 ? '4' : '2'}`
-  return `<h${depth} id="${id}" class="${base}">${text}</h${depth}>`
+  return `<h${depth} id="${id}">${text}</h${depth}>`
 }
 
 renderer.listitem = function (text: any) {
@@ -92,8 +91,16 @@ function escapeHtml(str: string) {
   ))
 }
 
-function injectDiagrams(html: string, diagrams: Diagram[] = []) {
+function hasDiagramCodeBlock(md: string, type: DiagramType): boolean {
+  // crude check: look for ```mermaid or ```<type> in the markdown
+  const regex = new RegExp("```(mermaid|" + type + ")\\b", "i");
+  return regex.test(md);
+}
+
+function injectDiagrams(html: string, diagrams: Diagram[] = [], md: string) {
   return html.replace(/\{\{DIAGRAM:([a-zA-Z0-9_-]+)\}\}/g, (match, type) => {
+    // Only inject if not already present in the markdown
+    if (hasDiagramCodeBlock(md, type)) return "";
     const items = type === 'ALL' ? diagrams : diagrams.filter(d => d.type === type)
     return items.map((diagram, idx) => {
       let content = diagram.svg
@@ -110,15 +117,23 @@ function injectDiagrams(html: string, diagrams: Diagram[] = []) {
   })
 }
 
+function stripOuterCodeBlock(markdown: string): string {
+  // Remove leading and trailing triple backticks and optional language identifier
+  return markdown.replace(/^```(?:markdown)?\n/, '').replace(/\n```$/, '');
+}
+
 export default function DocumentationRenderer({ content, diagrams = [] }: DocumentationRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const mdWithPlaceholders = insertDiagramPlaceholders(content, sectionToDiagramType, diagrams)
+  // Strip outer code block if present
+  const cleanContent = stripOuterCodeBlock(content);
+
+  const mdWithPlaceholders = insertDiagramPlaceholders(cleanContent, sectionToDiagramType, diagrams)
   const rawHtml = typeof marked.parse === 'function'
     ? (marked.parse(mdWithPlaceholders) as string)
     : marked(mdWithPlaceholders) as string
 
-  const html = injectDiagrams(rawHtml, diagrams)
+  const html = injectDiagrams(rawHtml, diagrams, cleanContent);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -172,7 +187,7 @@ export default function DocumentationRenderer({ content, diagrams = [] }: Docume
     <Card className="overflow-hidden p-6 bg-white dark:bg-zinc-900">
       <div
         ref={containerRef}
-        className="max-w-3xl mx-auto font-sans prose prose-slate dark:prose-invert prose-headings:font-bold prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl prose-h4:text-xl prose-h1:mb-6 prose-h2:mb-4 prose-h3:mb-3 prose-h4:mb-2 prose-p:mb-4 prose-li:marker:text-primary prose-blockquote:border-l-4 prose-blockquote:border-blue-400 prose-blockquote:bg-blue-50 dark:prose-blockquote:bg-zinc-800 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-md prose-table:border prose-table:border-gray-300 prose-th:bg-gray-100 prose-td:bg-white prose-pre:bg-zinc-900 prose-pre:text-gray-100 prose-pre:rounded-lg prose-pre:p-4 prose-code:bg-zinc-800 prose-code:text-green-300 prose-code:px-1 prose-code:rounded"
+        className="prose prose-lg max-w-3xl mx-auto font-sans"
       />
     </Card>
   )

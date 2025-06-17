@@ -82,6 +82,10 @@ function isValidMermaidSyntax(chart: string): boolean {
   return hasValidStarter
 }
 
+function isArchitectureBeta(chart: string): boolean {
+  return chart.trim().toLowerCase().startsWith("architecture-beta");
+}
+
 export default function Mermaid({ chart, className, fallback }: MermaidProps) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -223,33 +227,33 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
     if (mermaidRef.current && svg) {
       const svgElement = mermaidRef.current.querySelector("svg")
       if (svgElement) {
-        // Add responsive attributes
-        svgElement.setAttribute("width", "100%")
-        svgElement.setAttribute("height", "100%")
-        svgElement.style.maxWidth = "100%"
-        svgElement.style.minHeight = "100%"
-
-        // Ensure the viewBox is set for proper scaling
-        if (
-          !svgElement.getAttribute("viewBox") &&
-          svgElement.getAttribute("width") &&
-          svgElement.getAttribute("height")
-        ) {
-          const width = Number.parseFloat(svgElement.getAttribute("width") || "800")
-          const height = Number.parseFloat(svgElement.getAttribute("height") || "600")
-          svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
+        if (isArchitectureBeta(chart)) {
+          // Only for architecture-beta diagrams:
+          svgElement.setAttribute("width", "100%")
+          svgElement.style.height = "auto"
+          svgElement.style.maxWidth = "100%"
+          svgElement.style.display = "block"
+          svgElement.style.minHeight = "0"
+          // Ensure viewBox is set
+          if (
+            !svgElement.getAttribute("viewBox") &&
+            svgElement.getAttribute("width") &&
+            svgElement.getAttribute("height")
+          ) {
+            const width = Number.parseFloat(svgElement.getAttribute("width") || "800")
+            const height = Number.parseFloat(svgElement.getAttribute("height") || "600")
+            svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
+          }
         }
-
         // Add a subtle drop shadow for hero animations
         if (className?.includes("hero")) {
           svgElement.style.filter = "drop-shadow(0 4px 12px rgba(0,0,0,0.1))"
         }
-
         // Add custom class for further CSS if needed
         svgElement.classList.add("custom-mermaid-svg")
       }
     }
-  }, [svg, className])
+  }, [svg, className, chart])
 
   if (loading) {
     return (
@@ -286,7 +290,7 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
 
   return (
     <div
-      className={`mermaid-diagram w-full overflow-auto ${className || ""}`}
+      className={`mermaid-diagram w-full overflow-auto ${isArchitectureBeta(chart) ? "architecture-diagram" : ""} ${className || ""}`}
       dangerouslySetInnerHTML={{ __html: svg || "" }}
       ref={mermaidRef}
     />
