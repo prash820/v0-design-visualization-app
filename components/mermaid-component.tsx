@@ -82,7 +82,7 @@ function isValidMermaidSyntax(chart: string): boolean {
 }
 
 function isArchitectureBeta(chart: string): boolean {
-  return chart.trim().toLowerCase().startsWith("architecture-beta");
+  return chart.trim().toLowerCase().startsWith("architecture-beta")
 }
 
 export default function Mermaid({ chart, className, fallback }: MermaidProps) {
@@ -124,25 +124,31 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
           theme: "base",
           themeVariables: {
             primaryColor: "#FFD6A5", // Pastel orange
-            primaryTextColor: "#22223B",
+            primaryTextColor: "#1a1a1a", // Much darker text
             primaryBorderColor: "#FFB86B", // Soft orange border
             lineColor: "#FFB86B",
             fontFamily: "'Inter', 'Segoe UI', 'Arial', sans-serif",
-            fontSize: className?.includes("scale-75") ? "12px" : "14px", // Smaller for playground
+            fontSize: className?.includes("scale-75") ? "12px" : "14px",
             edgeLabelBackground: "#fff",
             clusterBkg: "#FFF5E1", // Lighter orange background
             clusterBorder: "#FFB86B",
             nodeBorder: "#FFB86B",
-            nodeTextColor: "#FF7F50", // Coral for node text
+            nodeTextColor: "#1a1a1a", // Dark text for nodes
             background: "#FFF8F1",
             actorBorder: "#FFB86B",
             actorBkg: "#FFF5E1",
             signalColor: "#FFB86B",
-            classText: "#FF7F50",
+            classText: "#1a1a1a", // Dark text for classes
             labelBoxBkgColor: "#fff",
             labelBoxBorderColor: "#FFD6A5",
             noteBkgColor: "#FFF5E1",
             noteBorderColor: "#FFB86B",
+            noteTextColor: "#1a1a1a", // Dark text for notes
+            // Additional text color properties
+            textColor: "#1a1a1a", // General text color
+            mainBkg: "#ffffff", // White background for diagram elements
+            secondaryColor: "#f8f9fa",
+            tertiaryColor: "#e9ecef",
             // Make nodes rounded
             nodeRadius: "8",
           },
@@ -167,9 +173,9 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
             useMaxWidth: true,
           },
           architecture: {
-            padding: 132,      // Try increasing for more whitespace
-            iconSize: 148,     // Try increasing/decreasing for icon clarity
-            fontSize: 118  
+            padding: 132, // Try increasing for more whitespace
+            iconSize: 148, // Try increasing/decreasing for icon clarity
+            fontSize: 118,
           },
           // Suppress error rendering in DOM
           suppressErrorRendering: true,
@@ -179,8 +185,8 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
         if (mermaidAPI.registerIconPacks) {
           mermaidAPI.registerIconPacks([
             {
-              name: 'logos',
-              loader: () => import('@iconify-json/logos').then((module) => module.icons),
+              name: "logos",
+              loader: () => import("@iconify-json/logos").then((module) => module.icons),
             },
           ])
         }
