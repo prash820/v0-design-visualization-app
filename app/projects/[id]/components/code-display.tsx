@@ -219,17 +219,16 @@ export function IaCCodeDisplay({ code, language = 'hcl' }: IaCCodeDisplayProps) 
         <CardTitle>Generated Infrastructure Code</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[600px] rounded-md border p-4 overflow-auto bg-gray-900">
-        <div className="prose prose-invert max-w-none">
-
-          <pre className="rounded-md overflow-hidden text-gray-100 text-base leading-relaxed font-mono bg-transparent">
-            <code
-              className={`language-${language}`}
-              dangerouslySetInnerHTML={{
-                __html: highlightCode(code, language),
-              }}
-            />
-          </pre>
+        <div className="rounded-md border p-4 overflow-auto bg-gray-900" style={{ maxHeight: '80vh' }}>
+          <div className="prose prose-invert max-w-none">
+            <pre className="whitespace-pre font-mono text-gray-100 text-base leading-relaxed bg-transparent">
+              <code
+                className={`language-${language}`}
+                dangerouslySetInnerHTML={{
+                  __html: highlightCode(code, language),
+                }}
+              />
+            </pre>
           </div>
         </div>
       </CardContent>

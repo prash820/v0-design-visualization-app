@@ -18,6 +18,7 @@ import {
   generateDocumentationAsync,
   generateIaC,
   checkAsyncJobStatus,
+  getIaCJobStatus,
 } from "@/lib/api/visualization"
 import { validateToken } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
@@ -660,110 +661,6 @@ export default function ProjectPageClient({ id }: { id: string }) {
     }
   }
 
-  // Add polling effect for IaC generation
-  useEffect(() => {
-    let pollingInterval: NodeJS.Timeout | null = null
-
-    const pollIaCStatus = async () => {
-      if (!iacJobId) return
-      try {
-        const statusResp = await checkAsyncJobStatus(iacJobId, id)
-        setIacStatus(statusResp.status)
-        
-        // Calculate progress based on status
-        let progress = iacProgress
-        if (statusResp.status === "processing") {
-          progress = Math.min(90, (statusResp.progress ?? 0) + 40) // Add 40 to the base progress
-        } else if (statusResp.status === "completed") {
-          progress = 100
-        }
-        setIacProgress(progress)
-        
-        console.log("[IaC Poll] Status response:", statusResp)
-        
-        if (statusResp.status === "completed") {
-          if (statusResp.result) {
-            console.log("[IaC Poll] Received result:", statusResp.result)
-            
-            // Extract the code from the response
-            let infrastructureCode = statusResp.result
-            if (typeof infrastructureCode === 'object' && infrastructureCode.code) {
-              infrastructureCode = infrastructureCode.code
-            }
-            
-            // Clean and validate the code
-            const cleanedCode = infrastructureCode.trim()
-            if (!cleanedCode.includes('provider') && !cleanedCode.includes('resource')) {
-              throw new Error("Invalid Terraform configuration received")
-            }
-            
-            // Update project state with the generated code
-            try {
-              await updateProjectState(id, {
-                lastCode: cleanedCode,
-              })
-              
-              // Reload the project to get the latest infraCode
-              await loadProject()
-              
-              toast({
-                title: "Success",
-                description: "Infrastructure code generated successfully",
-                variant: "default",
-              })
-            } catch (err) {
-              console.error("[IaC Poll] Error updating project state:", err)
-            }
-          } else {
-            console.error("[IaC Poll] No result in completed status response")
-            setError("No infrastructure code was generated. Please try again.")
-          }
-          
-          setIsGeneratingIaC(false)
-          setIacStatus("completed")
-          setIacProgress(100)
-          setIacJobId(null) // Stop polling
-        } else if (statusResp.status === "failed") {
-          console.error("[IaC Poll] Generation failed:", statusResp.error)
-          setIsGeneratingIaC(false)
-          setIacStatus("failed")
-          setIacProgress(0)
-          setIacJobId(null)
-          if (statusResp.error) {
-            setError(statusResp.error)
-            toast({
-              title: "Error",
-              description: statusResp.error,
-              variant: "destructive",
-            })
-          }
-        }
-      } catch (err) {
-        console.error("[IaC Poll] Error polling infrastructure status:", err)
-        setIsGeneratingIaC(false)
-        setIacStatus("failed")
-        setIacProgress(0)
-        setIacJobId(null)
-        const errorMessage = err instanceof Error ? err.message : "Failed to poll infrastructure status. Please try again."
-        setError(errorMessage)
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        })
-      }
-    }
-
-    if (iacJobId && (iacStatus === "pending" || iacStatus === "processing")) {
-      pollIaCStatus() // Immediate first poll
-      pollingInterval = setInterval(pollIaCStatus, 3000)
-    }
-
-    return () => {
-      if (pollingInterval) clearInterval(pollingInterval)
-    }
-  }, [iacJobId]) // Only depend on iacJobId to prevent unnecessary re-runs
-
   // Update handleGenerateIaC to match documentation pattern
   const handleGenerateIaC = async () => {
     try {
@@ -811,29 +708,19 @@ export default function ProjectPageClient({ id }: { id: string }) {
       });
 
       if (response.jobId) {
-        
-
-      // Set the job ID to trigger the polling effect
-      setIacJobId(response.jobId)
-      setIacStatus("processing")
-      setIacProgress(20)
-
-      toast({
-        title: "Infrastructure generation started",
-        description: "Your infrastructure code is being generated. This may take a minute or two.",
-      })
-      } else if (response.code) {
-        setIacStatus("completed")
-        setIacProgress(100)
-        setIacJobId(null)
-        setTerraformConfig(response.code)
-        setIsGeneratingIaC(false)
+        setIacJobId(response.jobId)
+        setIacStatus("processing")
+        setIacProgress(20)
+        toast({
+          title: "Infrastructure generation started",
+          description: "Your infrastructure code is being generated. This may take a minute or two.",
+        })
       } else {
         setIacStatus("failed")
-        setError("Failed to generate infrastructure code")
+        setError("Failed to start infrastructure code generation")
         toast({
           title: "Error",
-          description: "Failed to generate infrastructure code",
+          description: "Failed to start infrastructure code generation",
           variant: "destructive",
         })
       }
@@ -849,6 +736,72 @@ export default function ProjectPageClient({ id }: { id: string }) {
       setIsGeneratingIaC(false)
     }
   }
+
+  // Add polling effect for IaC generation
+  useEffect(() => {
+    let pollingInterval: NodeJS.Timeout | null = null
+
+    const pollIaCStatus = async () => {
+      if (!iacJobId) return
+      try {
+        const statusResp = await getIaCJobStatus(iacJobId)
+        setIacStatus(statusResp.status)
+        let progress = iacProgress
+        if (statusResp.status === "processing") {
+          progress = Math.min(90, (statusResp.progress ?? 0) + 40)
+        } else if (statusResp.status === "completed") {
+          progress = 100
+        }
+        setIacProgress(progress)
+        if (statusResp.status === "completed") {
+          if (statusResp.result && statusResp.result.code) {
+            setTerraformConfig(statusResp.result.code)
+          } else {
+            setError("No infrastructure code was generated. Please try again.")
+          }
+          setIsGeneratingIaC(false)
+          setIacStatus("completed")
+          setIacProgress(100)
+          setIacJobId(null)
+        } else if (statusResp.status === "failed") {
+          setIsGeneratingIaC(false)
+          setIacStatus("failed")
+          setIacProgress(0)
+          setIacJobId(null)
+          if (statusResp.error) {
+            setError(statusResp.error)
+            toast({
+              title: "Error",
+              description: statusResp.error,
+              variant: "destructive",
+            })
+          }
+        }
+      } catch (err) {
+        console.error("[IaC Poll] Error polling infrastructure status:", err)
+        setIsGeneratingIaC(false)
+        setIacStatus("failed")
+        setIacProgress(0)
+        setIacJobId(null)
+        const errorMessage = err instanceof Error ? err.message : "Failed to poll infrastructure status. Please try again."
+        setError(errorMessage)
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    }
+
+    if (iacJobId && (iacStatus === "pending" || iacStatus === "processing")) {
+      pollIaCStatus()
+      pollingInterval = setInterval(pollIaCStatus, 3000)
+    }
+
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval)
+    }
+  }, [iacJobId])
 
   // Render the async generation status
   const renderAsyncStatus = () => {
