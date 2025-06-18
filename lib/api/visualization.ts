@@ -990,15 +990,15 @@ export async function generateLowLevelDocumentation({
 // Generate Infrastructure as Code
 export const generateIaC = async (
   request: GenerateIaCRequest
-): Promise<{ jobId?: string; code?: string; documentation?: string }> => {
+): Promise<{ jobId: string; code?: string; documentation?: string }> => {
   try {
     console.log("Generating IaC with request:", request);
-    const response = await apiClient.post(API_ENDPOINTS.GENERATE.IAC, {
-      ...request,
-      async: true // Add async flag
-    });
+    const response = await apiClient.post<{ jobId: string; code?: string; documentation?: string }>(
+      API_ENDPOINTS.GENERATE.IAC, 
+      request
+    );
     console.log("IaC generation response:", response);
-    return response as { jobId?: string; code?: string; documentation?: string };
+    return response;
   } catch (error) {
     console.error("Error generating IaC:", error);
     throw error instanceof ApiError ? error : new ApiError("Failed to generate IaC", 500);

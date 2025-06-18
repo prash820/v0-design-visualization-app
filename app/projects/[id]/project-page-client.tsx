@@ -805,11 +805,10 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
       // Start async IaC generation
       const response = await generateIaC({
-        prompt,
+        prompt: prompt,
         projectId: id,
-        umlDiagrams,
-        async: true
-      })
+        umlDiagrams: umlDiagrams
+      });
 
       if (response.jobId) {
         
