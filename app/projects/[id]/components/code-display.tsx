@@ -1,18 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { AppCodeResponse } from "@/lib/types"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppCodeResponse } from "@/lib/types";
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
 
 interface CodeDisplayProps {
-  code: AppCodeResponse
+  code: AppCodeResponse;
 }
 
 export function CodeDisplay({ code }: CodeDisplayProps) {
   const highlightCode = (code: string, language: string) => {
-    // In v0 environment, just return the plain code
-    // In production, this would use highlight.js
-    return code
-  }
+    try {
+      return hljs.highlight(code, { language }).value;
+    } catch (error) {
+      return code;
+    }
+  };
 
   return (
     <Card className="w-full">
@@ -36,42 +40,57 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
               </TabsList>
 
               <TabsContent value="components">
-                <ScrollArea className="h-[600px] rounded-md border p-4">
+                <div className="h-[600px] rounded-md border p-4 overflow-auto">
                   {Object.entries(code.frontend.components).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                        <code>{content}</code>
+                      <pre className="rounded-md overflow-hidden">
+                        <code
+                          className="language-typescript"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCode(content, 'typescript'),
+                          }}
+                        />
                       </pre>
                     </div>
                   ))}
-                </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="pages">
-                <ScrollArea className="h-[600px] rounded-md border p-4">
+                <div className="h-[600px] rounded-md border p-4 overflow-auto">
                   {Object.entries(code.frontend.pages).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                        <code>{content}</code>
+                      <pre className="rounded-md overflow-hidden">
+                        <code
+                          className="language-typescript"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCode(content, 'typescript'),
+                          }}
+                        />
                       </pre>
                     </div>
                   ))}
-                </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="utils">
-                <ScrollArea className="h-[600px] rounded-md border p-4">
+                <div className="h-[600px] rounded-md border p-4 overflow-auto">
                   {Object.entries(code.frontend.utils).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                        <code>{content}</code>
+                      <pre className="rounded-md overflow-hidden">
+                        <code
+                          className="language-typescript"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCode(content, 'typescript'),
+                          }}
+                        />
                       </pre>
                     </div>
                   ))}
-                </ScrollArea>
+                </div>
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -86,70 +105,134 @@ export function CodeDisplay({ code }: CodeDisplayProps) {
               </TabsList>
 
               <TabsContent value="controllers">
-                <ScrollArea className="h-[600px] rounded-md border p-4">
+                <div className="h-[600px] rounded-md border p-4 overflow-auto">
                   {Object.entries(code.backend.controllers).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                        <code>{content}</code>
+                      <pre className="rounded-md overflow-hidden">
+                        <code
+                          className="language-typescript"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCode(content, 'typescript'),
+                          }}
+                        />
                       </pre>
                     </div>
                   ))}
-                </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="models">
-                <ScrollArea className="h-[600px] rounded-md border p-4">
+                <div className="h-[600px] rounded-md border p-4 overflow-auto">
                   {Object.entries(code.backend.models).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                        <code>{content}</code>
+                      <pre className="rounded-md overflow-hidden">
+                        <code
+                          className="language-typescript"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCode(content, 'typescript'),
+                          }}
+                        />
                       </pre>
                     </div>
                   ))}
-                </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="routes">
-                <ScrollArea className="h-[600px] rounded-md border p-4">
+                <div className="h-[600px] rounded-md border p-4 overflow-auto">
                   {Object.entries(code.backend.routes).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                        <code>{content}</code>
+                      <pre className="rounded-md overflow-hidden">
+                        <code
+                          className="language-typescript"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCode(content, 'typescript'),
+                          }}
+                        />
                       </pre>
                     </div>
                   ))}
-                </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="utils">
-                <ScrollArea className="h-[600px] rounded-md border p-4">
+                <div className="h-[600px] rounded-md border p-4 overflow-auto">
                   {Object.entries(code.backend.utils).map(([filename, content]) => (
                     <div key={filename} className="mb-8">
                       <h3 className="text-lg font-semibold mb-2">{filename}</h3>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                        <code>{content}</code>
+                      <pre className="rounded-md overflow-hidden">
+                        <code
+                          className="language-typescript"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCode(content, 'typescript'),
+                          }}
+                        />
                       </pre>
                     </div>
                   ))}
-                </ScrollArea>
+                </div>
               </TabsContent>
             </Tabs>
           </TabsContent>
 
           <TabsContent value="documentation">
-            <ScrollArea className="h-[600px] rounded-md border p-4">
+            <div className="h-[600px] rounded-md border p-4 overflow-auto">
               <div className="prose prose-invert max-w-none">
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto text-sm">
-                  <code>{code.documentation}</code>
+                <pre className="rounded-md overflow-hidden">
+                  <code
+                    className="language-markdown"
+                    dangerouslySetInnerHTML={{
+                      __html: highlightCode(code.documentation, 'markdown'),
+                    }}
+                  />
                 </pre>
               </div>
-            </ScrollArea>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
-  )
+  );
 }
+
+// IaCCodeDisplay: For displaying a single infrastructure code block (e.g., Terraform)
+interface IaCCodeDisplayProps {
+  code: string;
+  language?: string; // e.g., 'hcl' for Terraform, default to 'hcl'
+}
+
+export function IaCCodeDisplay({ code, language = 'hcl' }: IaCCodeDisplayProps) {
+  const highlightCode = (code: string, language: string) => {
+    try {
+      return hljs.highlight(code, { language }).value;
+    } catch (error) {
+      return code;
+    }
+  };
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Generated Infrastructure Code</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[600px] rounded-md border p-4 overflow-auto bg-gray-900">
+        <div className="prose prose-invert max-w-none">
+
+          <pre className="rounded-md overflow-hidden text-gray-100 text-base leading-relaxed font-mono bg-transparent">
+            <code
+              className={`language-${language}`}
+              dangerouslySetInnerHTML={{
+                __html: highlightCode(code, language),
+              }}
+            />
+          </pre>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+} 

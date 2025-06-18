@@ -94,8 +94,8 @@ export default function DiagramRenderer({
         </div>
 
         {/* Code Editor - 1/3 width */}
-        <div className="w-1/3 bg-gray-50 dark:bg-gray-800 flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b bg-gray-100 dark:bg-gray-700">
+        <div className="w-1/3 bg-black-50 dark:bg-black-800 flex flex-col">
+          <div className="flex items-center justify-between p-3 border-b bg-black-100 dark:bg-black-700">
             <span className="text-sm font-medium">Mermaid Code</span>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={handleRetry} title="Re-render diagram">

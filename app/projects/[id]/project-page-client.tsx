@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress"
 import ConnectionStatus from "@/components/connection-status"
 import { GenerateAppCode } from "./components/generate-app-code"
 import { CodeEditor } from "./components/code-editor"
+import { CodeDisplay, IaCCodeDisplay } from "./components/code-display"
 
 // Define diagram type mapping
 const DIAGRAM_TYPE_MAPPING = {
@@ -785,7 +786,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
       setIsGeneratingIaC(true)
       setIacProgress(0)
       setIacStatus("pending")
-      setActiveTab("infrastructure")
+      setActiveTab("iac")
 
       console.log("Prompt:", prompt)
       console.log("Project ID:", id)
@@ -810,9 +811,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
         async: true
       })
 
-      if (!response.jobId) {
-        throw new Error("No job ID received from the server")
-      }
+      if (response.jobId) {
+        
 
       // Set the job ID to trigger the polling effect
       setIacJobId(response.jobId)
@@ -823,6 +823,21 @@ export default function ProjectPageClient({ id }: { id: string }) {
         title: "Infrastructure generation started",
         description: "Your infrastructure code is being generated. This may take a minute or two.",
       })
+      } else if (response.code) {
+        setIacStatus("completed")
+        setIacProgress(100)
+        setIacJobId(null)
+        setTerraformConfig(response.code)
+        setIsGeneratingIaC(false)
+      } else {
+        setIacStatus("failed")
+        setError("Failed to generate infrastructure code")
+        toast({
+          title: "Error",
+          description: "Failed to generate infrastructure code",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       console.error("Error in handleGenerateIaC:", error)
       setIacStatus("failed")
@@ -1324,27 +1339,22 @@ export default function ProjectPageClient({ id }: { id: string }) {
                     </div>
                   ) : terraformConfig ? (
                     <div className="space-y-4">
-                      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md">
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-lg font-medium">Generated Terraform Configuration</h3>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              navigator.clipboard.writeText(terraformConfig);
-                              toast({
-                                title: "Copied",
-                                description: "Infrastructure code copied to clipboard",
-                              });
-                            }}
-                          >
-                            Copy Code
-                          </Button>
-                        </div>
-                        <pre className="overflow-auto max-h-[600px] p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                          <code className="text-sm font-mono">{terraformConfig}</code>
-                        </pre>
+                      <div className="flex justify-end mb-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(terraformConfig);
+                            toast({
+                              title: "Copied",
+                              description: "Infrastructure code copied to clipboard",
+                            });
+                          }}
+                        >
+                          Copy Code
+                        </Button>
                       </div>
+                      <IaCCodeDisplay code={terraformConfig} />
                       {iacStatus && iacStatus !== "completed" && renderIaCStatus()}
                     </div>
                   ) : (
@@ -1380,8 +1390,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
                     {project && <GenerateAppCode project={project} onCodeGenerated={setGeneratedCode} />}
                     {generatedCode && (
                       <CodeEditor
-                        code={generatedCode}
-                        onSave={async (updatedCode) => {
+                        code={generatedCode.documentation}
+                        onChange={(updatedCode: string | undefined) => {
                           // TODO: Implement save functionality
                           console.log("Saving updated code:", updatedCode)
                         }}
