@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
   GENERATE: {
     DIAGRAM: `${API_BASE_URL}/generate`,
     UML: `${API_BASE_URL}/uml/generate`,
+    UML_BASE: `${API_BASE_URL}/uml`,
     DOCUMENTATION: `${API_BASE_URL}/documentation/generate`,
     DOCUMENTATION_ASYNC: `${API_BASE_URL}/documentation/generate`,
     HIGH_LEVEL_DOCS: `${API_BASE_URL}/documentation/high-level`,

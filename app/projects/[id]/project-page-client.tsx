@@ -19,6 +19,7 @@ import {
   generateIaC,
   checkAsyncJobStatus,
   getIaCJobStatus,
+  getUmlJobStatus,
 } from "@/lib/api/visualization"
 import { validateToken } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
@@ -63,6 +64,11 @@ export default function ProjectPageClient({ id }: { id: string }) {
   const [iacJobId, setIacJobId] = useState<string | null>(null)
 
   const [generatedCode, setGeneratedCode] = useState<AppCodeResponse | null>(null)
+
+  // UML job tracking state
+  const [umlJobId, setUmlJobId] = useState<string | null>(null)
+  const [umlStatus, setUmlStatus] = useState<string | null>(null)
+  const [umlProgress, setUmlProgress] = useState(0)
 
   // Define diagram types
   const diagramTypes = [
@@ -357,7 +363,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
     return diagramsArray
   }
 
-  // Generate all diagrams with a single API call - Synchronous version
+  // Generate all diagrams with a single API call - Asynchronous version
   const handleGenerateDiagrams = async () => {
     if (!prompt.trim()) {
       toast({
@@ -370,6 +376,8 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
     setIsGenerating(true)
     setActiveTab("diagrams")
+    setUmlProgress(0)
+    setUmlStatus("pending")
 
     try {
       // Get the project ID, checking both id and _id fields
@@ -402,34 +410,31 @@ export default function ProjectPageClient({ id }: { id: string }) {
         // Don't show a toast for this error since it's not critical
       }
 
-      // Generate all diagrams with a single API call
+      // Start async diagram generation
       const response = await generateAllDiagrams({
         prompt,
         projectId: id,
       })
 
-      console.log("Generate all diagrams response:", response)
-
-      // Process the response to extract all diagrams
-      const processedDiagrams = processDiagramResponse(response)
-
-      console.log("Processed diagrams:", processedDiagrams)
-
-      // Update state with the processed diagrams
-      if (Array.isArray(processedDiagrams) && processedDiagrams.length > 0) {
-        setProjectDiagrams(processedDiagrams)
-        setHasDiagrams(true)
+      if (response.jobId) {
+        setUmlJobId(response.jobId)
+        setUmlStatus("processing")
+        setUmlProgress(20)
+        toast({
+          title: "Diagram generation started",
+          description: "Your diagrams are being generated. This may take a minute or two.",
+        })
       } else {
-        setProjectDiagrams([])
-        setHasDiagrams(false)
+        setUmlStatus("failed")
+        setError("Failed to start diagram generation")
+        toast({
+          title: "Error",
+          description: "Failed to start diagram generation",
+          variant: "destructive",
+        })
       }
-
-      toast({
-        title: "Diagrams generated",
-        description: "All diagrams have been generated successfully. You can now generate documentation.",
-      })
     } catch (error) {
-      console.error("Error in batch generation:", error)
+      console.error("Error in diagram generation:", error)
 
       // Check if it's a network error
       const isNetworkError =
@@ -453,7 +458,7 @@ export default function ProjectPageClient({ id }: { id: string }) {
           variant: "destructive",
         })
       }
-    } finally {
+      setUmlStatus("failed")
       setIsGenerating(false)
     }
   }
@@ -803,6 +808,87 @@ export default function ProjectPageClient({ id }: { id: string }) {
     }
   }, [iacJobId])
 
+  // Add polling effect for UML generation
+  useEffect(() => {
+    let pollingInterval: NodeJS.Timeout | null = null
+
+    const pollUmlStatus = async () => {
+      if (!umlJobId) return
+      try {
+        const statusResp = await getUmlJobStatus(umlJobId)
+        setUmlStatus(statusResp.status)
+        let progress = umlProgress
+        if (statusResp.status === "processing") {
+          progress = Math.min(90, (statusResp.progress ?? 0) + 40)
+        } else if (statusResp.status === "completed") {
+          progress = 100
+        }
+        setUmlProgress(progress)
+        if (statusResp.status === "completed") {
+          if (statusResp.result) {
+            // Process the result to extract all diagrams
+            const processedDiagrams = processDiagramResponse(statusResp.result)
+            console.log("Processed diagrams from async job:", processedDiagrams)
+
+            // Update state with the processed diagrams
+            if (Array.isArray(processedDiagrams) && processedDiagrams.length > 0) {
+              setProjectDiagrams(processedDiagrams)
+              setHasDiagrams(true)
+            } else {
+              setProjectDiagrams([])
+              setHasDiagrams(false)
+            }
+          } else {
+            setError("No diagrams were generated. Please try again.")
+          }
+          setIsGenerating(false)
+          setUmlStatus("completed")
+          setUmlProgress(100)
+          setUmlJobId(null)
+          toast({
+            title: "Diagrams generated",
+            description: "All diagrams have been generated successfully. You can now generate documentation.",
+          })
+        } else if (statusResp.status === "failed") {
+          setIsGenerating(false)
+          setUmlStatus("failed")
+          setUmlProgress(0)
+          setUmlJobId(null)
+          if (statusResp.error) {
+            setError(statusResp.error)
+            toast({
+              title: "Error",
+              description: statusResp.error,
+              variant: "destructive",
+            })
+          }
+        }
+      } catch (err) {
+        console.error("[UML Poll] Error polling diagram status:", err)
+        setIsGenerating(false)
+        setUmlStatus("failed")
+        setUmlProgress(0)
+        setUmlJobId(null)
+        const errorMessage = err instanceof Error ? err.message : "Failed to poll diagram status. Please try again."
+        setError(errorMessage)
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    }
+
+    if (umlJobId && (umlStatus === "pending" || umlStatus === "processing")) {
+      pollUmlStatus()
+      pollingInterval = setInterval(pollUmlStatus, 3000)
+    }
+
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval)
+    }
+  }, [umlJobId])
+
   // Render the async generation status
   const renderAsyncStatus = () => {
     if (!asyncStatus) return null
@@ -891,6 +977,51 @@ export default function ProjectPageClient({ id }: { id: string }) {
         </div>
         {iacStatus !== "failed" && (
           <Progress value={iacProgress} className="h-2 mt-2" />
+        )}
+      </div>
+    )
+  }
+
+  // Render the UML generation status
+  const renderUmlStatus = () => {
+    if (!umlStatus) return null
+
+    let statusText = ""
+    let statusColor = ""
+    let icon = <Loader2 className="h-5 w-5 animate-spin mr-2" />
+
+    switch (umlStatus) {
+      case "pending":
+        statusText = "Initializing diagram generation..."
+        statusColor = "text-blue-600 dark:text-blue-400"
+        break
+      case "processing":
+        statusText = "Generating diagrams... This may take a minute or two."
+        statusColor = "text-blue-600 dark:text-blue-400"
+        break
+      case "completed":
+        statusText = "Diagrams generated successfully!"
+        statusColor = "text-green-600 dark:text-green-400"
+        icon = <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+        break
+      case "failed":
+        statusText = error || "Failed to generate diagrams. Please try again."
+        statusColor = "text-red-600 dark:text-red-400"
+        icon = <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+        break
+      default:
+        statusText = "Processing..."
+        statusColor = "text-blue-600 dark:text-blue-400"
+    }
+
+    return (
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
+        <div className="flex items-center mb-2">
+          {icon}
+          <p className={`text-sm font-medium ${statusColor}`}>{statusText}</p>
+        </div>
+        {umlStatus !== "failed" && (
+          <Progress value={umlProgress} className="h-2 mt-2" />
         )}
       </div>
     )
@@ -1167,9 +1298,18 @@ export default function ProjectPageClient({ id }: { id: string }) {
               </CardHeader>
               <CardContent className="pt-4">
                 <TabsContent value="diagrams" className="mt-0">
-                  {Array.isArray(projectDiagrams) &&
-                  projectDiagrams.length > 0 &&
-                  projectDiagrams.some((d) => d.diagramData) ? (
+                  {isGenerating ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Generating Diagrams</h3>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
+                        Please wait while we generate diagrams based on your prompt...
+                      </p>
+                      {renderUmlStatus()}
+                    </div>
+                  ) : Array.isArray(projectDiagrams) &&
+                    projectDiagrams.length > 0 &&
+                    projectDiagrams.some((d) => d.diagramData) ? (
                     <>
                       <DiagramTabs
                         diagrams={projectDiagrams}

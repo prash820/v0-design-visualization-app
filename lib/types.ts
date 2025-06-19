@@ -289,3 +289,35 @@ export interface AppCodeResponse {
   };
   documentation: string;
 }
+
+// Diagram generation interfaces
+export interface GenerateDiagramRequest {
+  prompt: string
+  diagramType: string
+}
+
+export interface GenerateAllDiagramsRequest {
+  prompt: string
+  projectId?: string
+}
+
+export interface AsyncJobResponse {
+  jobId: string
+  status: "pending" | "processing" | "completed" | "failed"
+  result?: any
+  error?: string
+  progress?: number
+}
+
+// Documentation generation interfaces
+export interface GenerateDocumentationRequest {
+  prompt: string
+  projectId?: string
+  umlDiagrams?: Record<string, string>
+}
+
+// Deployment interfaces
+export interface DeployRequest {
+  code: string
+  projectId?: string
+}

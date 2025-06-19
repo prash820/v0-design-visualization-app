@@ -1,68 +1,20 @@
 import { apiClient, ApiError } from "@/lib/api/client"
 import { API_ENDPOINTS, POLLING_INTERVAL, MAX_POLLING_ATTEMPTS } from "@/lib/config"
-import type { UMLDiagram } from "@/lib/types"
-
-export interface GenerateDiagramRequest {
-  prompt: string
-  diagramType: string
-}
-
-export interface GenerateAllDiagramsRequest {
-  prompt: string
-  projectId?: string
-}
-
-export interface GenerateDocumentationRequest {
-  prompt: string
-  projectId?: string
-  umlDiagrams?: Record<string, string>
-}
-
-export interface GenerateIaCRequest {
-  prompt: string
-  projectId: string
-  umlDiagrams?: Record<string, string>
-  documentation?: string
-  async?: boolean
-}
-
-export interface DeployRequest {
-  code: string
-  projectId?: string
-}
-
-export interface AsyncJobResponse {
-  jobId: string
-  status: "pending" | "processing" | "completed" | "failed"
-  result?: any
-  error?: string
-  progress?: number
-}
+import type { 
+  UMLDiagram, 
+  GenerateDiagramRequest, 
+  GenerateAllDiagramsRequest, 
+  AsyncJobResponse,
+  GenerateDocumentationRequest,
+  GenerateIaCRequest,
+  DeployRequest,
+  GenerateAppCodeRequest,
+  AppCodeResponse
+} from "@/lib/types"
 
 export interface GenerateIaCResponse {
   code: string
   documentation: string
-}
-
-export interface GenerateAppCodeRequest {
-  prompt: string;
-  projectId: string;
-  umlDiagrams: Record<string, string>;
-}
-
-export interface AppCodeResponse {
-  frontend: {
-    components: Record<string, string>;
-    pages: Record<string, string>;
-    utils: Record<string, string>;
-  };
-  backend: {
-    controllers: Record<string, string>;
-    models: Record<string, string>;
-    routes: Record<string, string>;
-    utils: Record<string, string>;
-  };
-  documentation: string;
 }
 
 // Maximum number of retries for network requests
@@ -86,18 +38,18 @@ export async function generateDiagram(params: GenerateDiagramRequest): Promise<U
 }
 
 // Generate all UML diagrams at once with a single API call
-export async function generateAllDiagrams(params: GenerateAllDiagramsRequest): Promise<UMLDiagram> {
+export async function generateAllDiagrams(params: GenerateAllDiagramsRequest): Promise<{ jobId: string }> {
   try {
     console.log("Generating all diagrams with prompt:", params.prompt)
 
-    // Make a single API call to generate all diagrams
-    const response = await apiClient.post<UMLDiagram>(API_ENDPOINTS.GENERATE.UML, {
+    // Make a single API call to generate all diagrams asynchronously
+    const response = await apiClient.post<{ jobId: string }>(API_ENDPOINTS.GENERATE.UML, {
       prompt: params.prompt,
       projectId: params.projectId,
       generateAll: true, // Signal to backend that we want all diagram types
     })
 
-    console.log("All diagrams response:", response)
+    console.log("All diagrams job started with ID:", response.jobId)
 
     return response
   } catch (error) {
@@ -115,12 +67,11 @@ export async function generateUML({
   projectId?: string
   prompt: string
   diagramType: string
-}): Promise<UMLDiagram> {
+}): Promise<{ jobId: string }> {
   try {
     // Map frontend diagram type to backend diagram type
     const backendDiagramType = mapDiagramType(diagramType)
-
-    return await apiClient.post<UMLDiagram>(API_ENDPOINTS.GENERATE.UML, {
+    return await apiClient.post<{ jobId: string }>(API_ENDPOINTS.GENERATE.UML, {
       projectId,
       prompt,
       diagramType: backendDiagramType,
@@ -1011,6 +962,15 @@ export const getIaCJobStatus = async (jobId: string): Promise<any> => {
   } catch (error) {
     console.error("Error getting IaC job status:", error);
     throw error instanceof ApiError ? error : new ApiError("Failed to get IaC job status", 500);
+  }
+};
+
+export const getUmlJobStatus = async (jobId: string): Promise<any> => {
+  try {
+    return await apiClient.get<any>(`${API_ENDPOINTS.GENERATE.UML_BASE}/status/${jobId}`);
+  } catch (error) {
+    console.error("Error getting UML job status:", error);
+    throw error instanceof ApiError ? error : new ApiError("Failed to get UML job status", 500);
   }
 };
 

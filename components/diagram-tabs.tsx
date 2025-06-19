@@ -32,7 +32,7 @@ export default function DiagramTabs({ diagrams, isGenerating, onRegenerateAll }:
   const { toast } = useToast()
 
   const [diagramCodes, setDiagramCodes] = useState<Record<string, string>>({})
-  const updateTimeoutRef = useRef<NodeJS.Timeout>()
+  const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Handle tab change
   const handleTabChange = (value: string) => {
