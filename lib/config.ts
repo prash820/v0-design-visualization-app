@@ -44,8 +44,23 @@ export const API_ENDPOINTS = {
     ASYNC_STATUS: (jobId: string, projectId: string) => `${API_BASE_URL}/documentation/status/${jobId}?projectId=${projectId}`,
     ASYNC_RESULT: (jobId: string) => `${API_BASE_URL}/documentation/result/${jobId}`,
   },
-  // Deployment endpoint
-  DEPLOY: `${API_BASE_URL}/deploy`,
+  // Deployment endpoints
+  DEPLOY: {
+    BASE: `${API_BASE_URL}/deploy`,
+    JOB_STATUS: (jobId: string) => `${API_BASE_URL}/deploy/job/${jobId}`,
+    DESTROY: `${API_BASE_URL}/deploy/destroy`,
+    RETRY: `${API_BASE_URL}/deploy/retry`,
+    INFRASTRUCTURE_STATUS: (projectId: string) => `${API_BASE_URL}/deploy/status/${projectId}`,
+    VALIDATE: (projectId: string) => `${API_BASE_URL}/deploy/validate/${projectId}`,
+    COSTS: (projectId: string) => `${API_BASE_URL}/deploy/costs/${projectId}`,
+    OUTPUTS: (projectId: string) => `${API_BASE_URL}/deploy/outputs/${projectId}`,
+    STATE: (projectId: string) => `${API_BASE_URL}/deploy/state/${projectId}`,
+    APP: `${API_BASE_URL}/deploy/app`,
+    APP_RETRY: `${API_BASE_URL}/deploy/app/retry`,
+    APP_PURGE: `${API_BASE_URL}/deploy/app/purge`,
+    APP_STATUS: (projectId: string) => `${API_BASE_URL}/deploy/app/${projectId}`,
+    APP_JOB_STATUS: (jobId: string) => `${API_BASE_URL}/deploy/app/job/${jobId}`,
+  },
 }
 
 // Diagram types mapping

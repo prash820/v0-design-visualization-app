@@ -321,3 +321,78 @@ export interface DeployRequest {
   code: string
   projectId?: string
 }
+
+// Infrastructure Deployment Types
+export interface InfrastructureDeployRequest {
+  projectId: string;
+  iacCode: string;
+}
+
+export interface InfrastructureDeployResponse {
+  jobId: string;
+  status: string;
+  message: string;
+}
+
+export interface InfrastructureJobStatus {
+  jobId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  result?: {
+    message: string;
+    logs: string;
+    outputs?: any;
+  };
+  error?: string;
+  startTime?: string;
+  endTime?: string;
+  terraformOutputs?: any;
+}
+
+export interface InfrastructureStatus {
+  projectId: string;
+  deploymentStatus: 'not_deployed' | 'pending' | 'deployed' | 'failed' | 'destroyed';
+  deploymentJobId?: string;
+  deploymentOutputs?: any;
+  terraformState?: any;
+  lastUpdated?: string;
+}
+
+export interface InfrastructureDestroyRequest {
+  projectId: string;
+}
+
+export interface InfrastructureValidationResponse {
+  projectId: string;
+  valid: boolean;
+  errors: string[];
+  message: string;
+}
+
+export interface InfrastructureCostEstimate {
+  projectId: string;
+  estimated: boolean;
+  costs: {
+    compute: number;
+    storage: number;
+    networking: number;
+    database: number;
+    total: number;
+    resourceCounts: Record<string, number>;
+    currency: string;
+    period: string;
+  };
+  message: string;
+}
+
+export interface TerraformOutputsResponse {
+  projectId: string;
+  outputs: Record<string, string>;
+  message: string;
+}
+
+export interface TerraformStateResponse {
+  projectId: string;
+  state: any;
+  message: string;
+}

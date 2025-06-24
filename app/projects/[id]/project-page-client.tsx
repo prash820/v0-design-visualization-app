@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, FileText, Code2, BarChart2, RefreshCw, CheckCircle, AlertCircle } from "lucide-react"
+import { Loader2, FileText, Code2, BarChart2, RefreshCw, CheckCircle, AlertCircle, Cloud } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import DashboardHeader from "@/components/dashboard-header"
 import DiagramTabs from "@/components/diagram-tabs"
@@ -29,6 +29,8 @@ import ConnectionStatus from "@/components/connection-status"
 import { GenerateAppCode } from "./components/generate-app-code"
 import { CodeEditor } from "./components/code-editor"
 import { CodeDisplay, IaCCodeDisplay } from "./components/code-display"
+import { InfrastructureDeployment } from "./components/infrastructure-deployment"
+import { ApplicationDeployment } from "./components/ApplicationDeployment"
 
 // Define diagram type mapping
 const DIAGRAM_TYPE_MAPPING = {
@@ -1136,37 +1138,6 @@ export default function ProjectPageClient({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectDiagrams])
 
-  const handleGenerateCode = async () => {
-    if (!project || !project.umlDiagrams) return
-
-    try {
-      setIsGenerating(true)
-      setError(null)
-      setGeneratedCode(null)
-
-      const response = await fetch("/api/generate-app-code", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          projectId: project.id,
-          umlDiagrams: project.umlDiagrams,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to generate code")
-      }
-
-      const data: AppCodeResponse = await response.json()
-      setGeneratedCode(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
-    } finally {
-      setIsGenerating(false)
-    }
-  }
 
   if (!isAuthenticated || isLoading) {
     return (
@@ -1289,10 +1260,11 @@ export default function ProjectPageClient({ id }: { id: string }) {
           <Card>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <CardHeader className="pb-0 pt-4">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="diagrams">Diagrams</TabsTrigger>
                   <TabsTrigger value="documentation">Documentation</TabsTrigger>
                   <TabsTrigger value="iac">Infrastructure</TabsTrigger>
+                  <TabsTrigger value="deploy">Deploy</TabsTrigger>
                   <TabsTrigger value="code">Application Code</TabsTrigger>
                 </TabsList>
               </CardHeader>
@@ -1448,6 +1420,28 @@ export default function ProjectPageClient({ id }: { id: string }) {
                       </div>
                       <IaCCodeDisplay code={terraformConfig} />
                       {iacStatus && iacStatus !== "completed" && renderIaCStatus()}
+                      
+                      {/* Quick Deploy Section */}
+                      <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                            <div>
+                              <h4 className="font-medium text-green-800 dark:text-green-200">Ready to Deploy</h4>
+                              <p className="text-sm text-green-600 dark:text-green-300">
+                                Your infrastructure code is ready. Deploy it to AWS with one click.
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => setActiveTab("deploy")}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Cloud className="w-4 h-4 mr-2" />
+                            Deploy Infrastructure
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1475,6 +1469,49 @@ export default function ProjectPageClient({ id }: { id: string }) {
                       )}
                     </div>
                   )}
+                </TabsContent>
+
+                <TabsContent value="deploy" className="mt-0">
+                  <Tabs defaultValue="infrastructure" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                      <TabsTrigger value="infrastructure">Infrastructure</TabsTrigger>
+                      <TabsTrigger value="application">Application</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="infrastructure">
+                      {terraformConfig ? (
+                        <InfrastructureDeployment
+                          projectId={id}
+                          iacCode={terraformConfig}
+                          onDeploymentComplete={(outputs) => {
+                            console.log("Deployment completed with outputs:", outputs)
+                            toast({
+                              title: "Deployment Complete",
+                              description: "Your infrastructure has been successfully deployed!",
+                            })
+                          }}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-800 mb-4">
+                            <Cloud className="h-6 w-6" />
+                          </div>
+                          <h3 className="text-lg font-medium mb-2">No Infrastructure Code</h3>
+                          <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
+                            Generate infrastructure code first to deploy your infrastructure.
+                          </p>
+                          <Button 
+                            onClick={() => setActiveTab("iac")}
+                            variant="outline"
+                          >
+                            Go to Infrastructure
+                          </Button>
+                        </div>
+                      )}
+                    </TabsContent>
+                    <TabsContent value="application">
+                      <ApplicationDeployment projectId={id} />
+                    </TabsContent>
+                  </Tabs>
                 </TabsContent>
 
                 <TabsContent value="code" className="mt-0">

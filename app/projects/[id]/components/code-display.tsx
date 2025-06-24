@@ -4,6 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppCodeResponse } from "@/lib/types";
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
+const SyntaxHighlighter = require('react-syntax-highlighter').default as any;
+
+const { solarizedLight } = require('react-syntax-highlighter/dist/esm/styles/hljs');
 
 interface CodeDisplayProps {
   code: AppCodeResponse;
@@ -205,14 +208,6 @@ interface IaCCodeDisplayProps {
 }
 
 export function IaCCodeDisplay({ code, language = 'hcl' }: IaCCodeDisplayProps) {
-  const highlightCode = (code: string, language: string) => {
-    try {
-      return hljs.highlight(code, { language }).value;
-    } catch (error) {
-      return code;
-    }
-  };
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -220,16 +215,18 @@ export function IaCCodeDisplay({ code, language = 'hcl' }: IaCCodeDisplayProps) 
       </CardHeader>
       <CardContent>
         <div className="rounded-md border p-4 overflow-auto bg-gray-900" style={{ maxHeight: '80vh' }}>
-          <div className="prose prose-invert max-w-none">
-            <pre className="whitespace-pre font-mono text-gray-100 text-base leading-relaxed bg-transparent">
-              <code
-                className={`language-${language}`}
-                dangerouslySetInnerHTML={{
-                  __html: highlightCode(code, language),
-                }}
-              />
-            </pre>
-          </div>
+        <SyntaxHighlighter
+            language={language}
+            style={solarizedLight}
+            customStyle={{
+              background: 'transparent',
+              color: '#f8f8f2',
+              fontSize: '1rem',
+              lineHeight: '1.6',
+            }}
+          >
+            {code}
+          </SyntaxHighlighter>
         </div>
       </CardContent>
     </Card>
