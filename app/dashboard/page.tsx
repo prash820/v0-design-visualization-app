@@ -18,13 +18,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Folder, Clock, BarChart2, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Plus, Folder, Clock, BarChart2, Loader2, DollarSign, Server, AlertTriangle, Activity } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import DashboardHeader from "@/components/dashboard-header"
 import { getProjects, createProject } from "@/lib/api/projects"
 import { validateToken } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
 import type { Project } from "@/lib/types"
+
+interface ResourcesOverview {
+  summary: {
+    total: number;
+    active: number;
+    provisioned: number;
+    deploymentFailed: number;
+    orphaned: number;
+    incomplete: number;
+  };
+  costEstimate: {
+    monthly: number;
+    breakdown: Record<string, number>;
+  };
+}
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -34,6 +50,7 @@ export default function DashboardPage() {
   const [newProjectDescription, setNewProjectDescription] = useState("")
   const [open, setOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [resourcesOverview, setResourcesOverview] = useState<ResourcesOverview | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -50,8 +67,9 @@ export default function DashboardPage() {
 
         setIsAuthenticated(true)
 
-        // Load projects
+        // Load projects and resources overview
         loadProjects()
+        loadResourcesOverview()
       } catch (error) {
         console.error("Auth check error:", error)
         router.push("/login")
@@ -79,6 +97,19 @@ export default function DashboardPage() {
     }
   }
 
+  const loadResourcesOverview = async () => {
+    try {
+      const response = await fetch('/api/magic/resources/overview')
+      if (response.ok) {
+        const data = await response.json()
+        setResourcesOverview(data)
+      }
+    } catch (error) {
+      console.error("Error loading resources overview:", error)
+      // Don't show error toast for resources - it's optional
+    }
+  }
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsCreating(true)
@@ -92,8 +123,8 @@ export default function DashboardPage() {
       // Log the project data to verify the ID field
       console.log("Created project:", newProject)
 
-      // Get the project ID, checking both id and _id fields
-      const projectId = newProject?.id || newProject?._id
+      // Get the project ID
+      const projectId = newProject?.id
 
       // Check if we have a valid project ID
       if (!projectId) {
@@ -134,6 +165,9 @@ export default function DashboardPage() {
       </div>
     )
   }
+
+  const hasIssues = resourcesOverview ? 
+    (resourcesOverview.summary.deploymentFailed + resourcesOverview.summary.orphaned) > 0 : false
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -190,6 +224,78 @@ export default function DashboardPage() {
           </Dialog>
         </div>
 
+        {/* Resource Management Overview Card */}
+        {resourcesOverview && (
+          <Card className={`mb-6 ${hasIssues ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Server className="h-5 w-5" />
+                    AWS Resources Overview
+                    {hasIssues && (
+                      <Badge variant="destructive" className="ml-2">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Issues Found
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Monitor your AWS resources and monthly costs
+                  </CardDescription>
+                </div>
+                <Link href="/dashboard/resources">
+                  <Button variant="outline">
+                    View Details
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    ${resourcesOverview.costEstimate.monthly}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Monthly Cost</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {resourcesOverview.summary.total}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Resources</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {resourcesOverview.summary.active}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Active Apps</div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${hasIssues ? 'text-red-600' : 'text-green-600'}`}>
+                    {resourcesOverview.summary.deploymentFailed + resourcesOverview.summary.orphaned}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Issues</div>
+                </div>
+              </div>
+              
+              {hasIssues && (
+                <div className="mt-4 p-3 bg-red-100 border border-red-200 rounded-md">
+                  <div className="flex items-center gap-2 text-red-800 text-sm">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="font-medium">
+                      {resourcesOverview.summary.deploymentFailed} failed deployments and {resourcesOverview.summary.orphaned} orphaned resources found.
+                    </span>
+                  </div>
+                  <div className="text-red-700 text-xs mt-1">
+                    These resources may be incurring ongoing AWS costs. Click "View Details" to manage them.
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs defaultValue="all">
           <TabsList className="mb-4">
             <TabsTrigger value="all">All Projects</TabsTrigger>
@@ -213,8 +319,8 @@ export default function DashboardPage() {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => {
-                  // Get the project ID, checking both id and _id fields
-                  const projectId = project?.id || project?._id
+                  // Get the project ID
+                  const projectId = project?.id
 
                   if (!projectId) {
                     console.error("Project missing ID:", project)
@@ -256,8 +362,8 @@ export default function DashboardPage() {
                   .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                   .slice(0, 6)
                   .map((project) => {
-                    // Get the project ID, checking both id and _id fields
-                    const projectId = project?.id || project?._id
+                    // Get the project ID
+                    const projectId = project?.id
 
                     if (!projectId) {
                       console.error("Project missing ID:", project)

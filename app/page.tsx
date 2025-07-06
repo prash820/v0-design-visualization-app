@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, BarChart2, Code2, FileText, Layers, Zap, Brain, Cpu, Network } from "lucide-react"
+import { ArrowRight, BarChart2, Code2, FileText, Layers, Zap, Brain, Cpu, Network, Sparkles } from "lucide-react"
 
 import WorkflowAnimation from "@/components/workflow-animation"
 
@@ -112,6 +112,17 @@ export default function Home() {
                       <Zap className="h-5 w-5" />
                       Start Building
                       <ArrowRight className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <Link href="/magic">
+                    <Button
+                      size="lg"
+                      className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white transition-all duration-300 hover:scale-105 text-base px-8 py-6 relative overflow-hidden"
+                    >
+                      <div className="absolute inset-0 bg-white/10 animate-pulse"></div>
+                      <Sparkles className="h-5 w-5 relative z-10" />
+                      <span className="relative z-10">✨ Magic Flow POC</span>
+                      <ArrowRight className="h-5 w-5 relative z-10" />
                     </Button>
                   </Link>
                   <Link href="/demo">

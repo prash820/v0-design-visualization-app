@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-// Dynamically import Monaco Editor with no SSR (default export)
+// Dynamically import Monaco Editor with no SSR (correctly handling default export)
 const MonacoEditor = dynamic(
-  () => import('@monaco-editor/react'),
+  () => import('@monaco-editor/react').then((mod) => mod.default),
   { ssr: false }
 )
 
