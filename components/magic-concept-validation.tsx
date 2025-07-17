@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight, CheckCircle, Edit3, Brain, Layers, GitBranch, Boxes } from "lucide-react";
 import MermaidComponent from "./mermaid-component";
+import DiagramTabs from "./diagram-tabs";
 
 interface ConceptResult {
   concept: {
@@ -19,11 +20,7 @@ interface ConceptResult {
     targetUser: string;
     valueProposition: string;
   };
-  diagrams: {
-    architecture: string;
-    sequence: string;
-    component: string;
-  };
+  diagrams: any; // Can be either old format or enhanced format
 }
 
 interface ConceptValidationProps {
@@ -60,6 +57,26 @@ const SafeMermaidComponent = ({ chart, title }: { chart: string; title?: string 
     console.warn('Mermaid rendering failed, using fallback:', error);
     return <DiagramFallback chart={chart} title={title || 'Diagram'} />;
   }
+};
+
+// Check if diagrams are in enhanced format (object with multiple diagram types)
+const isEnhancedDiagramFormat = (diagrams: any) => {
+  if (!diagrams || typeof diagrams !== 'object') return false;
+  
+  // Enhanced format has keys like 'class', 'sequence', 'component', 'uiComponent', etc.
+  const enhancedKeys = ['class', 'sequence', 'component', 'uiComponent', 'architecture', 'entity'];
+  return enhancedKeys.some(key => key in diagrams);
+};
+
+// Convert old format to enhanced format
+const convertToEnhancedFormat = (oldDiagrams: any) => {
+  if (!oldDiagrams) return {};
+  
+  return {
+    architecture: oldDiagrams.architecture,
+    sequence: oldDiagrams.sequence,
+    component: oldDiagrams.component
+  };
 };
 
 export default function MagicConceptValidation({
@@ -198,8 +215,8 @@ export default function MagicConceptValidation({
             <div>This can take 1-3 minutes for complex apps...</div>
             <div className="mt-1 text-xs">Elapsed: {elapsedSeconds}s</div>
             {elapsedSeconds > 60 && (
-              <div className="mt-2 text-xs text-amber-600">
-                Taking longer than usual - the AI is working hard on your concept!
+              <div className="mt-1 text-xs text-amber-600">
+                Generating comprehensive UML diagrams...
               </div>
             )}
           </div>
@@ -217,31 +234,7 @@ export default function MagicConceptValidation({
         <CardContent className="space-y-4">
           <p className="text-red-700">{status.error}</p>
           <Button onClick={onGoBack} variant="outline">
-            Try Again
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (status.status === 'completed' && (!status.result || !status.result.concept || !status.result.diagrams)) {
-    return (
-      <Card className="border-yellow-200">
-        <CardHeader>
-          <CardTitle className="text-yellow-600">⚠️ Incomplete Concept Data</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-yellow-700">
-            The concept was generated but some data is missing. Please try again.
-          </p>
-          <div className="text-sm text-muted-foreground">
-            <p>Debug info:</p>
-            <pre className="bg-muted p-2 rounded text-xs overflow-auto">
-              {JSON.stringify(status, null, 2)}
-            </pre>
-          </div>
-          <Button onClick={onGoBack} variant="outline">
-            Try Again
+            Go Back
           </Button>
         </CardContent>
       </Card>
@@ -249,146 +242,144 @@ export default function MagicConceptValidation({
   }
 
   const { concept, diagrams } = status.result!;
+  const isEnhanced = isEnhancedDiagramFormat(diagrams);
+  const diagramsToRender = isEnhanced ? diagrams : convertToEnhancedFormat(diagrams);
 
   return (
     <div className="space-y-6">
-      <Card className="border-green-200 bg-green-50/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-800">
-            <CheckCircle className="h-6 w-6" />
-            Concept Generated! Does this look right?
+      <Card className="border-primary/20">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2 text-2xl">
+            <CheckCircle className="h-7 w-7 text-green-600" />
+            Your App Concept is Ready! 🎉
           </CardTitle>
-          <p className="text-green-700">
-            Review the AI-generated concept and diagrams. You can make modifications before building.
+          <p className="text-muted-foreground">
+            Review your personalized app concept and architecture diagrams below
           </p>
         </CardHeader>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="concept" className="gap-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="concept" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
-            Concept
+            App Concept
           </TabsTrigger>
-          <TabsTrigger value="architecture" className="gap-2">
+          <TabsTrigger value="diagrams" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
             Architecture
-          </TabsTrigger>
-          <TabsTrigger value="sequence" className="gap-2">
-            <GitBranch className="h-4 w-4" />
-            User Flow
-          </TabsTrigger>
-          <TabsTrigger value="component" className="gap-2">
-            <Boxes className="h-4 w-4" />
-            Components
+            {isEnhanced && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                Enhanced
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="concept" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">{concept.name}</CardTitle>
-              <p className="text-lg text-muted-foreground">{concept.description}</p>
+              <CardTitle className="flex items-center gap-2">
+                <Boxes className="h-5 w-5 text-primary" />
+                {concept.name}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-sm text-muted-foreground mb-2">DESCRIPTION</h4>
+                <p className="text-sm">{concept.description}</p>
+              </div>
+              
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div>
-                    <Badge variant="outline" className="mb-2">Core Feature</Badge>
-                    <p className="text-sm">{concept.coreFeature}</p>
-                  </div>
-                  <div>
-                    <Badge variant="outline" className="mb-2">Target User</Badge>
-                    <p className="text-sm">{concept.targetUser}</p>
-                  </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">CORE FEATURE</h4>
+                  <p className="text-sm">{concept.coreFeature}</p>
                 </div>
-                <div className="space-y-3">
-                  <div>
-                    <Badge variant="outline" className="mb-2">Problem Solved</Badge>
-                    <p className="text-sm">{concept.problemSolved}</p>
-                  </div>
-                  <div>
-                    <Badge variant="outline" className="mb-2">Value Proposition</Badge>
-                    <p className="text-sm">{concept.valueProposition}</p>
-                  </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">PROBLEM SOLVED</h4>
+                  <p className="text-sm">{concept.problemSolved}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">TARGET USER</h4>
+                  <p className="text-sm">{concept.targetUser}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">VALUE PROPOSITION</h4>
+                  <p className="text-sm">{concept.valueProposition}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="architecture" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Architecture</CardTitle>
-              <p className="text-muted-foreground">How your app components will be structured</p>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg p-4 bg-muted/20">
-                <SafeMermaidComponent chart={diagrams.architecture} title="System Architecture" />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sequence" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Flow Sequence</CardTitle>
-              <p className="text-muted-foreground">How users will interact with your app</p>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg p-4 bg-muted/20">
-                <SafeMermaidComponent chart={diagrams.sequence} title="User Flow Sequence" />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="component" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Component Structure</CardTitle>
-              <p className="text-muted-foreground">Main components and their relationships</p>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg p-4 bg-muted/20">
-                <SafeMermaidComponent chart={diagrams.component} title="Component Structure" />
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="diagrams" className="space-y-4">
+          {isEnhanced ? (
+            <DiagramTabs 
+              diagrams={diagramsToRender} 
+              isGenerating={false}
+              onRegenerateAll={() => {
+                // Could implement regeneration if needed
+                console.log('Regenerate diagrams requested');
+              }}
+            />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Architecture Diagrams</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="architecture">
+                  <TabsList>
+                    <TabsTrigger value="architecture">Architecture</TabsTrigger>
+                    <TabsTrigger value="sequence">Sequence</TabsTrigger>
+                    <TabsTrigger value="component">Component</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="architecture" className="mt-4">
+                    <SafeMermaidComponent chart={diagrams.architecture} title="Architecture Diagram" />
+                  </TabsContent>
+                  
+                  <TabsContent value="sequence" className="mt-4">
+                    <SafeMermaidComponent chart={diagrams.sequence} title="Sequence Diagram" />
+                  </TabsContent>
+                  
+                  <TabsContent value="component" className="mt-4">
+                    <SafeMermaidComponent chart={diagrams.component} title="Component Diagram" />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
+      {/* Modifications Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Edit3 className="h-5 w-5" />
-            Want to modify anything?
+            Request Modifications (Optional)
           </CardTitle>
-          <p className="text-muted-foreground">
-            Describe any changes you'd like before we build your app
-          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
+            placeholder="Want to modify anything? Describe your changes here (e.g., 'Add user profiles and social features')"
             value={modifications}
             onChange={(e) => setModifications(e.target.value)}
-            placeholder="Add a dark mode option, change the color scheme to blue, include user authentication, etc."
-            className="min-h-[80px]"
+            rows={3}
           />
-          <div className="flex gap-3">
-            <Button onClick={onGoBack} variant="outline" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
+          
+          <div className="flex justify-between items-center">
+            <Button variant="outline" onClick={onGoBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Start Over
             </Button>
             <Button 
-              onClick={() => onApprove(modifications)}
-              size="lg"
-              className="flex-1 gap-2 text-lg"
+              onClick={() => onApprove(modifications.trim() || undefined)}
+              className="bg-green-600 hover:bg-green-700"
             >
-              Looks Good! Build My App
-              <ArrowRight className="h-5 w-5" />
+              Approve & Build App
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </CardContent>

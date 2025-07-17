@@ -166,23 +166,61 @@ export function ApplicationDeployment({ projectId }: ApplicationDeploymentProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Application Deployment</CardTitle>
-        <CardDescription>
-          Deploy your generated application code to the provisioned infrastructure
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Application Deployment</CardTitle>
+            <CardDescription>
+              Deploy your generated application code to the provisioned infrastructure
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadApplicationStatus}
+            disabled={isDeployingApp}
+            title="Refresh deployment status"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Application Status */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <span className="font-medium">Application Status:</span>
-          {getStatusBadge(applicationStatus?.appDeploymentStatus || 'not_deployed')}
+          <div className="flex items-center gap-2">
+            {getStatusBadge(applicationStatus?.appDeploymentStatus || 'not_deployed')}
+            {applicationStatus?.appDeploymentStatus === 'deployed' && (
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                Live
+              </Badge>
+            )}
+          </div>
         </div>
+
+        {/* Infrastructure Status Indicator */}
+        {applicationStatus?.infrastructureStatus && (
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <span className="font-medium">Infrastructure Status:</span>
+            <Badge 
+              variant={applicationStatus.infrastructureStatus === 'deployed' ? 'default' : 'outline'}
+              className={applicationStatus.infrastructureStatus === 'deployed' ? 'bg-green-500' : ''}
+            >
+              {applicationStatus.infrastructureStatus === 'deployed' ? (
+                <><CheckCircle className="w-3 h-3 mr-1" />Deployed</>
+              ) : (
+                applicationStatus.infrastructureStatus || 'Unknown'
+              )}
+            </Badge>
+          </div>
+        )}
+
         {/* Application Deployment Button */}
         {(!applicationStatus || applicationStatus.appDeploymentStatus === 'not_deployed' || applicationStatus.appDeploymentStatus === 'failed') && (
-          <div className="flex gap-2">
+          <div className="space-y-3">
             <Button 
               onClick={handleDeployApp} 
-              disabled={isDeployingApp}
+              disabled={isDeployingApp || applicationStatus?.infrastructureStatus !== 'deployed'}
               className="w-full"
             >
               {isDeployingApp ? (
@@ -197,13 +235,23 @@ export function ApplicationDeployment({ projectId }: ApplicationDeploymentProps)
                 </>
               )}
             </Button>
+            
+            {applicationStatus?.infrastructureStatus !== 'deployed' && (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Infrastructure must be deployed before deploying application code
+                </p>
+              </div>
+            )}
+
             {applicationStatus?.appDeploymentStatus === 'failed' && (
               <div className="flex gap-2">
                 <Button
                   onClick={handleRetryApp}
                   disabled={isRetrying}
                   variant="outline"
-                  size="sm"
+                  className="flex-1"
                 >
                   {isRetrying ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -217,14 +265,14 @@ export function ApplicationDeployment({ projectId }: ApplicationDeploymentProps)
                   onClick={handlePurgeApplication}
                   disabled={isPurging}
                   variant="destructive"
-                  size="sm"
+                  className="flex-1"
                 >
                   {isPurging ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
                     <Trash2 className="w-4 h-4 mr-2" />
                   )}
-                  {isPurging ? "Purging..." : "Purge Application"}
+                  {isPurging ? "Purging..." : "Purge & Reset"}
                 </Button>
               </div>
             )}
@@ -232,10 +280,19 @@ export function ApplicationDeployment({ projectId }: ApplicationDeploymentProps)
         )}
         {/* Application Deployment Outputs */}
         {applicationStatus?.appDeploymentStatus === 'deployed' && applicationStatus.appDeploymentOutputs && (
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-green-600">✅ Application Successfully Deployed!</div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <div>
+                  <h4 className="font-medium text-green-800 dark:text-green-200">Application Successfully Deployed!</h4>
+                  <p className="text-sm text-green-600 dark:text-green-300">Your application is live and accessible</p>
+                </div>
+              </div>
+            </div>
+            
             <div className="grid gap-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <span className="font-medium">Frontend URL:</span>
                 <a 
                   href={applicationStatus.appDeploymentOutputs.frontendUrl} 
@@ -247,7 +304,7 @@ export function ApplicationDeployment({ projectId }: ApplicationDeploymentProps)
                   Open App
                 </a>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <span className="font-medium">API Gateway URL:</span>
                 <a 
                   href={applicationStatus.appDeploymentOutputs.apiGatewayUrl} 
@@ -259,24 +316,36 @@ export function ApplicationDeployment({ projectId }: ApplicationDeploymentProps)
                   API Docs
                 </a>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <span className="font-medium">Lambda Function:</span>
-                <span className="text-sm text-gray-600">{applicationStatus.appDeploymentOutputs.lambdaFunctionName}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{applicationStatus.appDeploymentOutputs.lambdaFunctionName}</span>
               </div>
             </div>
             
-            {/* Purge button for deployed applications */}
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium">Application Resources</h4>
-                  <p className="text-xs text-gray-500">Clean up application files from S3 bucket</p>
+            {/* Prominent Purge Section for Deployed Applications */}
+            <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-orange-800 dark:text-orange-200 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    Application Resource Management
+                  </h4>
+                  <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                    <strong>Important:</strong> You must purge application resources before destroying infrastructure. 
+                    AWS prevents deletion of resources containing application files.
+                  </p>
+                  <ul className="text-xs text-orange-600 dark:text-orange-400 mt-2 space-y-1">
+                    <li>• Removes all files from S3 bucket</li>
+                    <li>• Cleans application deployment state</li>
+                    <li>• Enables safe infrastructure destruction</li>
+                  </ul>
                 </div>
                 <Button
                   onClick={handlePurgeApplication}
                   disabled={isPurging}
                   variant="outline"
                   size="sm"
+                  className="ml-4 border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900/30"
                 >
                   {isPurging ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

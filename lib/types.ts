@@ -21,7 +21,48 @@ export interface Project {
   documentation?: Documentation
   designDocument?: DesignDocument
   infraCode?: string
+  
+  // Enhanced app code structure
   appCode?: {
+    // App metadata
+    appType: 'react' | 'vue' | 'angular' | 'nextjs' | 'nuxt' | 'svelte' | 'vanilla' | 'unknown';
+    framework: string;
+    version: string;
+    
+    // File structure (organized by folders)
+    fileStructure: {
+      frontend: {
+        components: Record<string, string>;
+        pages: Record<string, string>;
+        utils: Record<string, string>;
+        styles: Record<string, string>;
+        assets: Record<string, string>;
+        config: Record<string, string>;
+      };
+      backend: {
+        controllers: Record<string, string>;
+        models: Record<string, string>;
+        routes: Record<string, string>;
+        utils: Record<string, string>;
+        middleware: Record<string, string>;
+        config: Record<string, string>;
+      };
+      shared: {
+        types: Record<string, string>;
+        interfaces: Record<string, string>;
+        constants: Record<string, string>;
+      };
+      build: {
+        packageJson: string;
+        tsconfig?: string;
+        webpackConfig?: string;
+        viteConfig?: string;
+        dockerfile?: string;
+        dockerCompose?: string;
+      };
+    };
+    
+    // Legacy flat structure (for backward compatibility)
     frontend: {
       components: Record<string, string>;
       pages: Record<string, string>;
@@ -34,6 +75,37 @@ export interface Project {
       utils: Record<string, string>;
     };
     documentation: string;
+    
+    // Build and deployment info
+    buildConfig: {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+      scripts: Record<string, string>;
+      buildCommand: string;
+      startCommand: string;
+      port: number;
+    };
+    
+    // Validation and quality metrics
+    validation: {
+      buildErrors: string[];
+      runtimeErrors: string[];
+      missingDependencies: string[];
+      addedDependencies: string[];
+      lintErrors: string[];
+      typeErrors: string[];
+      lastValidated: Date;
+    };
+  };
+  
+  // Project file system path (for actual file storage)
+  projectPath?: string;
+  projectStructure?: {
+    root: string;
+    frontend: string;
+    backend: string;
+    shared: string;
+    build: string;
   };
 }
 
@@ -276,6 +348,47 @@ export interface GenerateAppCodeRequest {
 }
 
 export interface AppCodeResponse {
+  // App metadata
+  appType: 'react' | 'vue' | 'angular' | 'nextjs' | 'nuxt' | 'svelte' | 'vanilla' | 'unknown';
+  framework: string;
+  version: string;
+  
+  // File structure (organized by folders)
+  fileStructure: {
+    frontend: {
+      components: Record<string, string>;
+      pages: Record<string, string>;
+      utils: Record<string, string>;
+      styles: Record<string, string>;
+      assets: Record<string, string>;
+      config: Record<string, string>;
+    };
+    backend: {
+      controllers: Record<string, string>;
+      models: Record<string, string>;
+      routes: Record<string, string>;
+      utils: Record<string, string>;
+      middleware: Record<string, string>;
+      config: Record<string, string>;
+    };
+    shared: {
+      types: Record<string, string>;
+      interfaces: Record<string, string>;
+      constants: Record<string, string>;
+    };
+    build: {
+      frontendPackageJson: string;
+      backendPackageJson: string;
+      tsconfig?: string;
+      webpackConfig?: string;
+      viteConfig?: string;
+      nextConfig?: string;
+      dockerfile?: string;
+      dockerCompose?: string;
+    };
+  };
+  
+  // Legacy flat structure (for backward compatibility)
   frontend: {
     components: Record<string, string>;
     pages: Record<string, string>;
@@ -288,6 +401,27 @@ export interface AppCodeResponse {
     utils: Record<string, string>;
   };
   documentation: string;
+  
+  // Build and deployment info
+  buildConfig: {
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+    scripts: Record<string, string>;
+    buildCommand: string;
+    startCommand: string;
+    port: number;
+  };
+  
+  // Validation and quality metrics
+  validation: {
+    buildErrors: string[];
+    runtimeErrors: string[];
+    missingDependencies: string[];
+    addedDependencies: string[];
+    lintErrors: string[];
+    typeErrors: string[];
+    lastValidated: Date;
+  };
 }
 
 // Diagram generation interfaces

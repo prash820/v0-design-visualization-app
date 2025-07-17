@@ -62,13 +62,20 @@ const RETRY_DELAY = 1000 // 1 second
 export const apiClient = {
   async request<T>(endpoint: string, options: RequestInit = {}, retries = 0): Promise<T> {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+    const isDevelopment = process.env.NODE_ENV === 'development'
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...options.headers,
+      ...(options.headers as Record<string, string> || {}),
     }
 
-    if (token) {
+    // In development mode, allow GET requests to project endpoints without authentication
+    const isProjectGetRequest = isDevelopment && 
+      options.method === 'GET' && 
+      endpoint.includes('/api/projects/') &&
+      !endpoint.includes('/api/projects/') // This ensures it's a specific project request
+
+    if (token && !isProjectGetRequest) {
       headers["Authorization"] = `Bearer ${token}`
     }
 
@@ -127,7 +134,7 @@ export const apiClient = {
       clearTimeout(timeoutId)
 
       // Handle abort error (timeout)
-      if (error.name === "AbortError") {
+      if ((error as Error).name === "AbortError") {
         console.error(`Request timeout for ${endpoint}`)
         throw new ApiError(
           "Request timeout. The operation is taking longer than expected. The process will continue in the background.",
@@ -136,7 +143,7 @@ export const apiClient = {
       }
 
       // Handle network errors more specifically
-      if (error instanceof TypeError && error.message.includes("fetch")) {
+      if (error instanceof TypeError && (error as Error).message.includes("fetch")) {
         console.error(`Network error when calling ${endpoint}:`, error)
 
         // Check if we're offline
@@ -167,7 +174,7 @@ export const apiClient = {
         throw error
       }
 
-      throw new ApiError(error.message || "Unknown error occurred", 500)
+      throw new ApiError((error as Error).message || "Unknown error occurred", 500)
     }
   },
 

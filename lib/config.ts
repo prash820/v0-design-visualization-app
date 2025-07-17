@@ -1,16 +1,26 @@
 // API configuration
 const isDevelopment = process.env.NODE_ENV === "development"
 
+// Detect if we're running locally (regardless of NODE_ENV)
+const isLocalDevelopment = typeof window !== 'undefined' 
+  ? window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  : true // Default to local for SSR
+
 // Base API URL - change based on environment with fallback mechanism
 export const API_BASE_URL = (() => {
-  // Primary URL
-  const primaryUrl = isDevelopment
+  // Always use localhost if we're running locally
+  if (isLocalDevelopment) {
+    console.log(`[API Config] Using localhost API (isLocalDevelopment: ${isLocalDevelopment}, NODE_ENV: ${process.env.NODE_ENV})`)
+    return "http://localhost:5001/api"
+  }
+  
+  // Only use Heroku URL if explicitly in production and not localhost
+  const url = isDevelopment
     ? "http://localhost:5001/api"
     : "https://chartai-backend-697f80778bd2.herokuapp.com/api"
-
-  // Check if the URL is accessible (this will be done at runtime)
-  // For now, just return the primary URL
-  return primaryUrl
+  
+  console.log(`[API Config] Using API URL: ${url} (isDevelopment: ${isDevelopment}, NODE_ENV: ${process.env.NODE_ENV})`)
+  return url
 })()
 
 // Ensure the API URL ends with a slash if needed

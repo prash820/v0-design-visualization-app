@@ -624,12 +624,27 @@ export function InfrastructureDeployment({
         ) : (
           <div className="text-center py-8">
             <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {infrastructureStatus?.deploymentStatus === 'deployed' 
-                ? "No state available" 
-                : "Deploy infrastructure to see state"
-              }
-            </p>
+            {infrastructureStatus?.deploymentStatus === 'deployed' ? (
+              <div className="space-y-2">
+                <p className="text-yellow-600 font-medium flex items-center justify-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  No Terraform state found
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Infrastructure status was corrected from "deployed" to "not_deployed"
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This can happen if previous deployment data was inconsistent
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                {infrastructureStatus?.deploymentStatus === 'not_deployed' 
+                  ? "Deploy infrastructure to see state" 
+                  : "No state available"
+                }
+              </p>
+            )}
           </div>
         )}
       </CardContent>

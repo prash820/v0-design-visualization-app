@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   Dialog,
@@ -45,11 +46,12 @@ interface ResourcesOverview {
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isCreating, setIsCreating] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [open, setOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState("")
   const [newProjectDescription, setNewProjectDescription] = useState("")
-  const [open, setOpen] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [newProjectPrompt, setNewProjectPrompt] = useState("")
+  const [isCreating, setIsCreating] = useState(false)
   const [resourcesOverview, setResourcesOverview] = useState<ResourcesOverview | null>(null)
   const router = useRouter()
   const { toast } = useToast()
@@ -118,6 +120,7 @@ export default function DashboardPage() {
       const newProject = await createProject({
         name: newProjectName,
         description: newProjectDescription,
+        prompt: newProjectPrompt, // Add prompt to project creation
       })
 
       // Log the project data to verify the ID field
@@ -137,6 +140,7 @@ export default function DashboardPage() {
       // Reset form fields
       setNewProjectName("")
       setNewProjectDescription("")
+      setNewProjectPrompt("")
       setOpen(false)
 
       toast({
@@ -180,11 +184,13 @@ export default function DashboardPage() {
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <form onSubmit={handleCreateProject}>
                 <DialogHeader>
                   <DialogTitle>Create New Project</DialogTitle>
-                  <DialogDescription>Create a new project to start generating visualizations.</DialogDescription>
+                  <DialogDescription>
+                    Create a new project with a detailed prompt describing what you want to build.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -193,18 +199,35 @@ export default function DashboardPage() {
                       id="name"
                       value={newProjectName}
                       onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="Enter project name"
+                      placeholder="e.g., E-commerce Platform"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">Description (Optional)</Label>
                     <Input
                       id="description"
                       value={newProjectDescription}
                       onChange={(e) => setNewProjectDescription(e.target.value)}
-                      placeholder="Enter project description"
+                      placeholder="Brief description of your project"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="prompt">
+                      Project Requirements
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
+                    <Textarea
+                      id="prompt"
+                      value={newProjectPrompt}
+                      onChange={(e) => setNewProjectPrompt(e.target.value)}
+                      placeholder="Describe what you want to build in detail:&#10;&#10;Example:&#10;- Build an e-commerce platform with user authentication&#10;- Include product catalog, shopping cart, and payment processing&#10;- Support multiple payment methods (Stripe, PayPal)&#10;- Admin dashboard for inventory management&#10;- Email notifications for orders&#10;- Mobile-responsive design"
+                      className="min-h-[120px] resize-none"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Be specific about features, technologies, and requirements. This will be used to generate diagrams, code, and infrastructure.
+                    </p>
                   </div>
                 </div>
                 <DialogFooter>

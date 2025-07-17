@@ -5,6 +5,7 @@ import type { Project } from "@/lib/types"
 export interface CreateProjectRequest {
   name: string
   description?: string
+  prompt?: string
 }
 
 export interface UpdateProjectRequest {
@@ -41,7 +42,7 @@ export async function getProjectById(id: string): Promise<Project> {
     return await apiClient.get<Project>(API_ENDPOINTS.PROJECTS.DETAIL(id))
   } catch (error) {
     console.error(`Error fetching project ${id}:`, error)
-    throw error instanceof ApiError ? error : new ApiError(`Failed to fetch project: ${error.message}`, 500)
+    throw error instanceof ApiError ? error : new ApiError(`Failed to fetch project: ${error instanceof Error ? error.message : 'Unknown error'}`, 500)
   }
 }
 

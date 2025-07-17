@@ -66,6 +66,7 @@ function isValidMermaidSyntax(chart: string): boolean {
     "sequenceDiagram",
     "classDiagram",
     "stateDiagram",
+    "stateDiagram-v2",
     "journey",
     "gantt",
     "pie",
@@ -73,16 +74,13 @@ function isValidMermaidSyntax(chart: string): boolean {
     "mindmap",
     "timeline",
     "quadrantChart",
-    "architecture-beta", // Allow architecture diagrams
+    "C4Context", // Allow C4 context diagrams
+    "erDiagram", // Allow entity relationship diagrams
   ]
 
   const hasValidStarter = validStarters.some((starter) => trimmed.toLowerCase().startsWith(starter.toLowerCase()))
 
   return hasValidStarter
-}
-
-function isArchitectureBeta(chart: string): boolean {
-  return chart.trim().toLowerCase().startsWith("architecture-beta");
 }
 
 export default function Mermaid({ chart, className, fallback }: MermaidProps) {
@@ -166,24 +164,9 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
           gantt: {
             useMaxWidth: true,
           },
-          architecture: {
-            padding: 132,      // Try increasing for more whitespace
-            iconSize: 148,     // Try increasing/decreasing for icon clarity
-            fontSize: 118  
-          },
           // Suppress error rendering in DOM
           suppressErrorRendering: true,
         })
-
-        // Register the 'logos' icon pack for architecture diagrams
-        if (mermaidAPI.registerIconPacks) {
-          mermaidAPI.registerIconPacks([
-            {
-              name: 'logos',
-              loader: () => import('@iconify-json/logos').then((module) => module.icons),
-            },
-          ])
-        }
 
         // Generate a unique ID for this render
         const diagramId = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -226,24 +209,6 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
     if (mermaidRef.current && svg) {
       const svgElement = mermaidRef.current.querySelector("svg")
       if (svgElement) {
-        if (isArchitectureBeta(chart)) {
-          // Only for architecture-beta diagrams:
-          svgElement.setAttribute("width", "100%")
-          svgElement.style.height = "auto"
-          svgElement.style.maxWidth = "100%"
-          svgElement.style.display = "block"
-          svgElement.style.minHeight = "0"
-          // Ensure viewBox is set
-          if (
-            !svgElement.getAttribute("viewBox") &&
-            svgElement.getAttribute("width") &&
-            svgElement.getAttribute("height")
-          ) {
-            const width = Number.parseFloat(svgElement.getAttribute("width") || "800")
-            const height = Number.parseFloat(svgElement.getAttribute("height") || "600")
-            svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
-          }
-        }
         // Add a subtle drop shadow for hero animations
         if (className?.includes("hero")) {
           svgElement.style.filter = "drop-shadow(0 4px 12px rgba(0,0,0,0.1))"
@@ -289,7 +254,7 @@ export default function Mermaid({ chart, className, fallback }: MermaidProps) {
 
   return (
     <div
-      className={`mermaid-diagram w-full overflow-auto ${isArchitectureBeta(chart) ? "architecture-diagram" : ""} ${className || ""}`}
+      className={`mermaid-diagram w-full overflow-auto ${className || ""}`}
       dangerouslySetInnerHTML={{ __html: svg || "" }}
       ref={mermaidRef}
     />

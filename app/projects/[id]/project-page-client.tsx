@@ -4,1144 +4,1658 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, FileText, Code2, BarChart2, RefreshCw, CheckCircle, AlertCircle, Cloud } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Loader2, 
+  Code2, 
+  FileText, 
+  Eye,
+  Layers,
+  FileCode,
+  Cloud,
+  Rocket,
+  Settings,
+  Palette,
+  Zap,
+  User,
+  Wand2,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+  Play,
+  AlertCircle,
+  Plus,
+  RotateCcw
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import DashboardHeader from "@/components/dashboard-header"
-import DiagramTabs from "@/components/diagram-tabs"
-import DocumentationWithTOC from "@/components/documentation-with-toc"
-import { getProjectById, updateProjectState } from "@/lib/api/projects"
-import {
-  generateAllDiagrams,
-  generateDocumentation,
-  generateDocumentationAsync,
-  generateIaC,
-  checkAsyncJobStatus,
-  getIaCJobStatus,
-  getUmlJobStatus,
-} from "@/lib/api/visualization"
+import { getProjectById } from "@/lib/api/projects"
 import { validateToken } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
-import type { Project, UMLDiagram, AppCodeResponse } from "@/lib/types"
-import { Progress } from "@/components/ui/progress"
-import ConnectionStatus from "@/components/connection-status"
-import { GenerateAppCode } from "./components/generate-app-code"
-import { CodeEditor } from "./components/code-editor"
-import { CodeDisplay, IaCCodeDisplay } from "./components/code-display"
-import { InfrastructureDeployment } from "./components/infrastructure-deployment"
-import { ApplicationDeployment } from "./components/ApplicationDeployment"
+import type { Project } from "@/lib/types"
 
-// Define diagram type mapping
-const DIAGRAM_TYPE_MAPPING = {
-  class: "Class Diagram",
-  sequence: "Sequence Diagram",
-  component: "Component Diagram",
-  architecture: "Architecture Diagram",
+// Import components
+import { ProjectOverview } from "./components/ProjectOverview"
+import { InfrastructureDeployment } from "./components/infrastructure-deployment"
+import AppDevelopment from "./components/AppDevelopment"
+import DiagramTabs from "@/components/diagram-tabs"
+
+// Backend API URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
+
+interface GeneratedFiles {
+  projectId: string
+  files: Record<string, string>
+  fileCount: number
+  generatedAt: string
+}
+
+type FlowMode = 'expert' | 'guided' | null
+
+interface GuidedFlowStatus {
+  step: 'summary' | 'diagrams' | 'infrastructure' | 'application' | 'deployment' | 'documentation' | 'completed'
+  progress: number
+  summary?: {
+    title: string
+    description: string
+    features: string[]
+    techStack: string[]
+    estimatedCost: string
+    timeline: string
+  }
+  umlJobId?: string
+  iacJobId?: string
+  umlDiagrams?: any
+  infraCode?: string
+  appCode?: any
+  isProcessing: boolean
+  error?: string
 }
 
 export default function ProjectPageClient({ id }: { id: string }) {
   const [project, setProject] = useState<Project | null>(null)
-  const [prompt, setPrompt] = useState("")
   const [isLoading, setIsLoading] = useState(true)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [isGeneratingDocs, setIsGeneratingDocs] = useState(false)
-  const [activeTab, setActiveTab] = useState("diagrams")
-  const [projectDiagrams, setProjectDiagrams] = useState<UMLDiagram[]>([])
-  const [hasDiagrams, setHasDiagrams] = useState(false)
-  const [documentation, setDocumentation] = useState("")
-  const [terraformConfig, setTerraformConfig] = useState("")
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isGeneratingUML, setIsGeneratingUML] = useState(false)
+  const [isGeneratingInfrastructure, setIsGeneratingInfrastructure] = useState(false)
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false)
+  const [generatedFiles, setGeneratedFiles] = useState<GeneratedFiles | null>(null)
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [asyncDocJobId, setAsyncDocJobId] = useState<string | null>(null)
-  const [asyncStatus, setAsyncStatus] = useState<string | null>(null)
-  const [asyncProgress, setAsyncProgress] = useState<number>(0)
-  const [isOffline, setIsOffline] = useState(false)
+  const [flowMode, setFlowMode] = useState<FlowMode>(null)
+  const [activeTab, setActiveTab] = useState("overview")
+  const [showPromptDialog, setShowPromptDialog] = useState(false)
+  const [editPrompt, setEditPrompt] = useState("")
+  const [isUpdatingPrompt, setIsUpdatingPrompt] = useState(false)
+  const [guidedFlowStatus, setGuidedFlowStatus] = useState<GuidedFlowStatus>({
+    step: 'summary',
+    progress: 0,
+    isProcessing: false
+  })
   const router = useRouter()
   const { toast } = useToast()
 
-  const [isGeneratingIaC, setIsGeneratingIaC] = useState(false)
-  const [iacProgress, setIacProgress] = useState(0)
-  const [iacStatus, setIacStatus] = useState<string | null>(null)
-  const [iacJobId, setIacJobId] = useState<string | null>(null)
-
-  const [generatedCode, setGeneratedCode] = useState<AppCodeResponse | null>(null)
-
-  // UML job tracking state
-  const [umlJobId, setUmlJobId] = useState<string | null>(null)
-  const [umlStatus, setUmlStatus] = useState<string | null>(null)
-  const [umlProgress, setUmlProgress] = useState(0)
-
-  // Define diagram types
-  const diagramTypes = [
-    { id: "class", name: "Class Diagram" },
-    { id: "sequence", name: "Sequence Diagram" },
-    { id: "component", name: "Component Diagram" },
-    { id: "architecture", name: "Architecture Diagram" },
-  ]
-
-  // Monitor online/offline status
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false)
-      toast({
-        title: "Back online",
-        description: "Your internet connection has been restored.",
-      })
-    }
-
-    const handleOffline = () => {
-      setIsOffline(true)
-      toast({
-        title: "You are offline",
-        description: "Some features may be limited until your connection is restored.",
-        variant: "destructive",
-      })
-    }
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    // Set initial state
-    setIsOffline(!navigator.onLine)
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [toast])
-
-  useEffect(() => {
-    // Check if user is authenticated
     const checkAuth = async () => {
       try {
+        // For development, allow viewing projects without authentication
+        const isDevelopment = process.env.NODE_ENV === 'development'
+        
+        if (isDevelopment) {
+          // Skip authentication check in development mode
+          console.log("Development mode: Skipping authentication check")
+          await loadProject()
+          return
+        }
+        
         const isValid = await validateToken()
-
         if (!isValid) {
           router.push("/login")
           return
         }
-
-        setIsAuthenticated(true)
-
-        // Validate project ID
-        if (!id || id === "undefined") {
-          console.error("Invalid project ID:", id)
-          setError("Invalid project ID. Please select a valid project.")
-          toast({
-            title: "Error",
-            description: "Invalid project ID. Redirecting to dashboard.",
-            variant: "destructive",
-          })
-
-          // Set a short timeout before redirecting to allow the toast to be seen
-          setTimeout(() => {
-            router.push("/dashboard")
-          }, 1500)
-          return
-        }
-
-        // Load project data
-        loadProject()
+        await loadProject()
       } catch (error) {
         console.error("Auth check error:", error)
-        router.push("/login")
+        // In development, still try to load the project even if auth fails
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Development mode: Attempting to load project despite auth error")
+          await loadProject()
+        } else {
+          router.push("/login")
+        }
       }
     }
-
     checkAuth()
-  }, [id, router, toast])
+  }, [id, router])
 
   const loadProject = async () => {
     setIsLoading(true)
-
     try {
-      // Validate project ID again as a safeguard
       if (!id || id === "undefined") {
         throw new Error("Invalid project ID")
       }
 
-      // Log the project ID we're trying to fetch
-      console.log("Fetching project with ID:", id)
-
+      // Debug logging for authentication
+      const token = localStorage.getItem('token')
+      console.log("Auth token available:", !!token)
+      console.log("Fetching project ID:", id)
+      console.log("API endpoint will be:", `${API_BASE_URL}/api/projects/${id}`)
+      
       const projectData = await getProjectById(id)
-
-      // Log the project data we received
-      console.log("Received project data:", projectData)
-
       if (!projectData) {
         throw new Error("Project not found")
       }
-
+      
+      // Debug logging to see what data we're getting
+      console.log("Project data loaded:", {
+        id: projectData.id,
+        name: projectData.name,
+        hasInfraCode: !!projectData.infraCode,
+        infraCodeType: typeof projectData.infraCode,
+        infraCodeLength: projectData.infraCode ? projectData.infraCode.length : 0,
+        hasPrompt: !!projectData.prompt,
+        hasUmlDiagrams: !!projectData.umlDiagrams,
+        hasAppCode: !!projectData.appCode
+      })
+      
       setProject(projectData)
 
-      if (projectData.prompt) {
-        setPrompt(projectData.prompt)
+      // Auto-determine flow mode based on project data
+      if (projectData.umlDiagrams || projectData.infraCode || projectData.appCode) {
+        setFlowMode('expert')
       }
 
-      // If design documentation exists, set it
-      if (projectData.design) {
-        setDocumentation(projectData.design)
-      }
-
-      // If infrastructure code exists, set it
-      if (projectData.infraCode) {
-        setTerraformConfig(projectData.infraCode)
-      }
-
-      // Check if the project has UML diagrams
-      if (projectData.umlDiagrams) {
-        console.log("Project has UML diagrams:", projectData.umlDiagrams)
-
-        // Convert the UML diagrams object to an array of UML diagram objects
-        const diagramsArray: UMLDiagram[] = []
-        const timestamp = new Date().toISOString()
-
-        // Process each diagram type in the umlDiagrams object
-        Object.entries(projectData.umlDiagrams).forEach(([key, value]) => {
-          if (value && typeof value === "string") {
-            diagramsArray.push({
-              id: `diagram-${projectData.id}-${key}-${Date.now()}`,
-              projectId: projectData.id,
-              diagramType:
-                DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] ||
-                `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
-              diagramData: value,
-              prompt: projectData.prompt || "",
-              createdAt: timestamp,
-              updatedAt: timestamp,
-            })
-          }
-        })
-
-        if (diagramsArray.length > 0) {
-          setProjectDiagrams(diagramsArray)
-          setHasDiagrams(true)
-          console.log("Set project diagrams from existing data:", diagramsArray)
-        } else {
-          // If no valid diagrams were found, initialize empty ones
-          const initialDiagrams = initializeDiagrams(id)
-          setProjectDiagrams(initialDiagrams)
-          setHasDiagrams(false)
-        }
-      } else {
-        // Initialize diagrams if needed
-        const initialDiagrams = initializeDiagrams(id)
-        setProjectDiagrams(initialDiagrams)
-        setHasDiagrams(false)
-      }
+      // Check for generated files
+      await checkGeneratedFiles()
     } catch (error) {
       console.error("Error loading project:", error)
-      setError(error instanceof ApiError ? error.message : "Failed to load project. Please try again.")
-
+      setError(error instanceof ApiError ? error.message : "Failed to load project")
       toast({
         title: "Error loading project",
-        description: error instanceof ApiError ? error.message : "Failed to load project. Please try again.",
+        description: error instanceof ApiError ? error.message : "Failed to load project",
         variant: "destructive",
       })
-
-      // Redirect to dashboard on error after a short delay
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 1500)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Initialize diagrams for all types
-  const initializeDiagrams = (projectId: string): UMLDiagram[] => {
-    // Ensure diagramTypes is an array
-    if (!Array.isArray(diagramTypes)) {
-      console.error("diagramTypes is not an array")
-      return []
-    }
-
-    return diagramTypes.map((type) => ({
-      id: `diagram-${projectId}-${type.id}`,
-      projectId: projectId,
-      diagramType: type.name || "Unknown Diagram",
-      diagramData: "",
-      prompt: "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }))
-  }
-
-  // Process the diagrams from the backend response
-  const processDiagramResponse = (response: any): UMLDiagram[] => {
-    console.log("Processing diagram response:", response)
-
-    // Check if the response has the expected format with diagram types as properties
-    const diagramsArray: UMLDiagram[] = []
-    const timestamp = new Date().toISOString()
-    const projectId = id
-    const currentPrompt = response.prompt || prompt
-
-    // Check for the nested diagrams object structure
-    if (response.diagrams && typeof response.diagrams === "object" && !Array.isArray(response.diagrams)) {
-      console.log("Found nested diagrams object structure")
-
-      // Process each diagram type in the nested diagrams object
-      Object.entries(response.diagrams).forEach(([key, value]) => {
-        // Skip non-diagram properties
-        if (!value || typeof value !== "string" || !DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING]) {
-          return
-        }
-
-        diagramsArray.push({
-          id: `diagram-${projectId}-${key}-${Date.now()}`,
-          projectId: projectId,
-          diagramType:
-            DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] ||
-            `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
-          diagramData: value as string,
-          prompt: currentPrompt,
-          createdAt: response.createdAt || timestamp,
-          updatedAt: response.updatedAt || timestamp,
-        })
-      })
-    }
-    // Check for direct properties format
-    else if (response.class || response.sequence || response.component || response.architecture) {
-      console.log("Found diagram data as direct properties")
-
-      // Process each diagram type
-      Object.entries(response).forEach(([key, value]) => {
-        // Skip non-diagram properties
-        if (!value || typeof value !== "string" || !DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING]) {
-          return
-        }
-
-        diagramsArray.push({
-          id: `diagram-${projectId}-${key}-${Date.now()}`,
-          projectId: projectId,
-          diagramType:
-            DIAGRAM_TYPE_MAPPING[key as keyof typeof DIAGRAM_TYPE_MAPPING] ||
-            `${key.charAt(0).toUpperCase() + key.slice(1)} Diagram`,
-          diagramData: value as string,
-          prompt: currentPrompt,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        })
-      })
-    }
-    // Check if the response has a diagrams array
-    else if (response.diagrams && Array.isArray(response.diagrams)) {
-      console.log("Found diagrams array with length:", response.diagrams.length)
-
-      // Map each diagram to the expected format
-      response.diagrams.forEach((diagram: any, index: number) => {
-        // Determine the diagram type based on the index or any type information in the diagram
-        const diagramType =
-          diagram.diagramType || (index < diagramTypes.length ? diagramTypes[index].name : "Unknown Diagram")
-
-        diagramsArray.push({
-          id: diagram.id || `diagram-${Date.now()}-${index}`,
-          projectId: projectId,
-          diagramType: diagramType,
-          diagramData: diagram.diagramData || "",
-          prompt: currentPrompt,
-          createdAt: diagram.createdAt || timestamp,
-          updatedAt: diagram.updatedAt || timestamp,
-        })
-      })
-    }
-    // If no diagrams array or properties, create a single diagram entry if there's diagramData
-    else if (response.diagramData) {
-      console.log("Found single diagram entry with diagramData")
-      diagramsArray.push({
-        id: response.id || `diagram-${Date.now()}`,
-        projectId: projectId,
-        diagramType: response.diagramType || "Class Diagram",
-        diagramData: response.diagramData || "",
-        prompt: currentPrompt,
-        createdAt: response.createdAt || timestamp,
-        updatedAt: response.updatedAt || timestamp,
-      })
-    }
-
-    console.log("Processed diagrams:", diagramsArray)
-    return diagramsArray
-  }
-
-  // Generate all diagrams with a single API call - Asynchronous version
-  const handleGenerateDiagrams = async () => {
-    if (!prompt.trim()) {
-      toast({
-        title: "Empty prompt",
-        description: "Please enter a prompt to generate diagrams.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsGenerating(true)
-    setActiveTab("diagrams")
-    setUmlProgress(0)
-    setUmlStatus("pending")
-
+  const checkGeneratedFiles = async () => {
     try {
-      // Get the project ID, checking both id and _id fields
-      const projectId = project?.id
-
-      // Ensure we have a valid project ID
-      if (!projectId) {
-        throw new Error("Invalid project ID")
-      }
-
-      // Try to save the prompt to the project state, but continue even if it fails
-      try {
-        // Skip state update if we're offline
-        if (isOffline) {
-          console.log("Device is offline, skipping project state update")
-        } else {
-          const stateUpdateResult = await updateProjectState(projectId, { prompt })
-          console.log("[DEBUG] updateProjectState result:", stateUpdateResult)
-          if (stateUpdateResult) {
-            console.log("Successfully updated project state with prompt")
-            await loadProject() // Reload project to get the latest prompt
-            console.log("[DEBUG] After loadProject, project:", project)
-          } else {
-            console.log("Project state update skipped or failed, continuing with diagram generation")
-          }
+      const response = await fetch(`${API_BASE_URL}/api/deploy/files/${id}`)
+      if (response.ok) {
+        const files = await response.json()
+        setGeneratedFiles(files)
+        
+        // Auto-select first file
+        const fileNames = Object.keys(files.files)
+        if (fileNames.length > 0) {
+          setSelectedFile(fileNames[0])
         }
-      } catch (stateError) {
-        // Log the error but continue with diagram generation
-        console.error("Failed to update project state, continuing with diagram generation:", stateError)
-        // Don't show a toast for this error since it's not critical
-      }
-
-      // Start async diagram generation
-      const response = await generateAllDiagrams({
-        prompt,
-        projectId: id,
-      })
-
-      if (response.jobId) {
-        setUmlJobId(response.jobId)
-        setUmlStatus("processing")
-        setUmlProgress(20)
-        toast({
-          title: "Diagram generation started",
-          description: "Your diagrams are being generated. This may take a minute or two.",
-        })
       } else {
-        setUmlStatus("failed")
-        setError("Failed to start diagram generation")
-        toast({
-          title: "Error",
-          description: "Failed to start diagram generation",
-          variant: "destructive",
-        })
+        setGeneratedFiles(null)
       }
     } catch (error) {
-      console.error("Error in diagram generation:", error)
-
-      // Check if it's a network error
-      const isNetworkError =
-        error instanceof ApiError &&
-        (error.message.includes("Network error") || error.message.includes("Failed to fetch"))
-
-      if (isNetworkError) {
-        setIsOffline(true)
-        toast({
-          title: "Network error",
-          description: "Unable to connect to the server. Please check your internet connection.",
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Error generating diagrams",
-          description:
-            error instanceof ApiError
-              ? error.message
-              : "There was an error generating your diagrams. Please try again.",
-          variant: "destructive",
-        })
-      }
-      setUmlStatus("failed")
-      setIsGenerating(false)
+      console.log("No generated files found:", error)
+      setGeneratedFiles(null)
     }
   }
 
-  // Generate documentation asynchronously
-  const handleGenerateDocumentation = async () => {
-    if (!hasDiagrams) {
-      toast({
-        title: "No diagrams available",
-        description: "Please generate diagrams first before creating documentation.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Validate that we have a prompt
-    if (!prompt || prompt.trim() === "") {
-      toast({
-        title: "Prompt required",
-        description: "Please enter a prompt to generate documentation.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsGeneratingDocs(true)
-    setActiveTab("documentation")
-    setAsyncStatus("pending")
-    setAsyncProgress(0)
-
-    try {
-      // Get the project ID
-      const projectId = project?.id
-
-      // Ensure we have a valid project ID
-      if (!projectId) {
-        throw new Error("Invalid project ID")
-      }
-
-      // Extract UML diagrams from projectDiagrams
-      const umlDiagrams: Record<string, string> = {}
-
-      // Map diagram types to the format expected by the API
-      projectDiagrams.forEach((diagram) => {
-        if (diagram.diagramData) {
-          // Convert diagram type to the key expected by the API
-          let diagramKey = ""
-
-          if (diagram.diagramType.toLowerCase().includes("class")) {
-            diagramKey = "classDiagram"
-          } else if (diagram.diagramType.toLowerCase().includes("sequence")) {
-            diagramKey = "sequenceDiagram"
-          } else if (diagram.diagramType.toLowerCase().includes("component")) {
-            diagramKey = "componentDiagram"
-          } else {
-            // Use the diagram type as the key, converted to camelCase
-            diagramKey = diagram.diagramType
-              .toLowerCase()
-              .replace(/\s+(.)/g, (_, c) => c.toUpperCase())
-              .replace(/\s+/g, "")
-              .replace(/diagram$/i, "Diagram")
-          }
-
-          umlDiagrams[diagramKey] = diagram.diagramData
-        }
-      })
-
-      console.log("UML diagrams for documentation:", umlDiagrams)
-      console.log("Using prompt for documentation:", prompt)
-
-      // Check if we're offline
-      if (isOffline) {
-        // Use mock documentation generation
-        console.log("Offline mode: Using mock documentation generation")
-        await new Promise((resolve) => setTimeout(resolve, 1500)) // Simulate delay
-
-        const mockJobId = `mock-${Date.now()}`
-        setAsyncDocJobId(mockJobId)
-        setAsyncStatus("processing")
-
-        // Store mock job in localStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem(
-            `mock-job-${mockJobId}`,
-            JSON.stringify({
-              status: "pending",
-              createdAt: Date.now(),
-            }),
-          )
-
-          // Simulate async processing
-          setTimeout(() => {
-            localStorage.setItem(
-              `mock-job-${mockJobId}`,
-              JSON.stringify({
-                status: "completed",
-                result: {
-                  content: `# ${prompt || "System"} Documentation\n\n*Generated in offline mode*\n\n## Overview\n\nThis is a mock documentation generated while you are offline. When your connection is restored, you'll be able to generate more detailed documentation.\n\n## System Components\n\nBased on the diagrams, the system appears to have several key components that work together to provide functionality.\n\n## Data Models\n\nThe system uses various data models to represent entities and their relationships.\n\n## Future Considerations\n\nWhen your internet connection is restored, you can generate more detailed documentation with AI assistance.`,
-                },
-                completedAt: Date.now(),
-              }),
-            )
-          }, 3000)
-        }
-
-        toast({
-          title: "Offline documentation",
-          description: "Using offline mode to generate basic documentation.",
-        })
-
-        return
-      }
-
-      // Try async documentation generation first
+  // API Helper Functions
+  const pollJobStatus = async (endpoint: string, jobId: string, maxAttempts: number = 30): Promise<any> => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        // Start the async documentation job
-        const response = await generateDocumentationAsync({
-          projectId: id,
-          prompt: prompt.trim(), // Ensure prompt is trimmed
-          umlDiagrams,
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${API_BASE_URL}${endpoint}/${jobId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         })
-
-        console.log("Async documentation job started with ID:", response.jobId)
-
-        // Set the job ID to trigger the polling effect
-        setAsyncDocJobId(response.jobId)
-        setAsyncStatus("processing")
-
-        toast({
-          title: "Documentation generation started",
-          description: "Your documentation is being generated. This may take a minute or two.",
-        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
+        const status = await response.json()
+        console.log(`Job status for ${endpoint}:`, status)
+        
+        if (status.status === 'completed') {
+          return status
+        } else if (status.status === 'failed') {
+          throw new Error(status.error || 'Job failed')
+        }
+        
+        // Still processing, wait and retry
+        await new Promise(resolve => setTimeout(resolve, 3000))
       } catch (error) {
-        // If async fails, fall back to synchronous
-        console.error("Error starting async documentation generation, falling back to synchronous:", error)
-        await generateDocumentationSynchronously(projectId, umlDiagrams)
+        console.error(`Poll attempt ${attempt + 1} failed for ${endpoint}:`, error)
+        if (attempt === maxAttempts - 1) {
+          throw error
+        }
+        await new Promise(resolve => setTimeout(resolve, 3000))
       }
+    }
+    throw new Error('Job polling timeout')
+  }
+
+  const generateProjectSummary = async () => {
+    if (!project?.prompt) {
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        error: 'No project prompt available' 
+      }))
+      return
+    }
+
+    setGuidedFlowStatus(prev => ({ ...prev, isProcessing: true, error: undefined }))
+    
+    try {
+      // Create a basic summary from the project prompt
+        setGuidedFlowStatus(prev => ({
+          ...prev,
+          isProcessing: false,
+        summary: {
+            title: project.name || 'Untitled Project',
+          description: project.prompt || 'No description available',
+          features: ['Core functionality', 'User interface', 'Data management'],
+          techStack: ['React', 'TypeScript', 'Node.js', 'AWS'],
+          estimatedCost: '$50-200/month',
+          timeline: '2-4 weeks'
+          },
+          progress: 20
+        }))
+
     } catch (error) {
-      console.error("Error generating documentation:", error)
-
-      // Check if it's a network error
-      const isNetworkError =
-        error instanceof ApiError &&
-        (error.message.includes("Network error") || error.message.includes("Failed to fetch"))
-
-      if (isNetworkError) {
-        setIsOffline(true)
-        toast({
-          title: "Network error",
-          description: "Unable to connect to the server. Using offline mode for basic documentation.",
-        })
-
-        // Generate basic offline documentation
-        setDocumentation(
-          `# ${prompt || "System"} Documentation\n\n*Generated in offline mode*\n\n## Overview\n\nThis is a basic documentation generated while you are offline. When your connection is restored, you'll be able to generate more detailed documentation.\n\n## System Components\n\nBased on the diagrams, the system appears to have several key components that work together to provide functionality.\n\n## Data Models\n\nThe system uses various data models to represent entities and their relationships.\n\n## Future Considerations\n\nWhen your internet connection is restored, you can generate more detailed documentation with AI assistance.`,
-        )
-      } else {
-        toast({
-          title: "Documentation generation failed",
-          description:
-            error instanceof ApiError ? error.message : "Failed to generate documentation. Please try again.",
-          variant: "destructive",
-        })
-      }
-
-      setIsGeneratingDocs(false)
-      setAsyncStatus(null)
-      setAsyncProgress(0)
+      console.error('Error generating project summary:', error)
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        isProcessing: false, 
+        error: error instanceof Error ? error.message : 'Failed to generate project summary' 
+      }))
     }
   }
 
-  // Synchronous documentation generation fallback
-  const generateDocumentationSynchronously = async (projectId: string, umlDiagrams?: Record<string, string>) => {
-    try {
-      // Ensure we have a valid prompt
-      const validPrompt = prompt && prompt.trim() !== "" ? prompt.trim() : "Generate comprehensive documentation"
-
-      // Generate documentation based on the diagrams
-      const docResponse = await generateDocumentation({
-        projectId: id,
-        prompt: validPrompt,
-        umlDiagrams,
-      })
-
-      setDocumentation(docResponse.content)
-
-      // Save the documentation string to the backend
-      try {
-        await updateProjectState(projectId, { design: docResponse.content })
-      } catch (e) {
-        console.error("Failed to save documentation to project state", e)
-      }
-
-      toast({
-        title: "Documentation generated",
-        description: "Documentation has been generated successfully based on your diagrams.",
-      })
-    } catch (error) {
-      console.error("Error generating documentation synchronously:", error)
-      throw error
-    } finally {
-      setIsGeneratingDocs(false)
-      setAsyncStatus(null)
-      setAsyncProgress(0)
-    }
-  }
-
-  // Update handleGenerateIaC to match documentation pattern
-  const handleGenerateIaC = async () => {
-    try {
-      console.log("Starting infrastructure generation process")
-
-      if (!prompt) {
-        toast({
-          title: "Error",
-          description: "Please enter a prompt for infrastructure generation",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Clear any previous error and terraform config
-      setError(null)
-      setTerraformConfig("")
-
-      // Set loading state and switch to infrastructure tab
-      setIsGeneratingIaC(true)
-      setIacProgress(0)
-      setIacStatus("pending")
-      setActiveTab("iac")
-
-      console.log("Prompt:", prompt)
-      console.log("Project ID:", id)
-
-      // Get all UML diagrams from the project
-      const umlDiagrams: Record<string, string> = {}
-      if (project?.umlDiagrams) {
-        Object.entries(project.umlDiagrams).forEach(([key, value]) => {
-          if (typeof value === "string") {
-            umlDiagrams[key] = value
-          }
-        })
-      }
-
-      console.log("Processing project diagrams:", umlDiagrams)
-
-      // Start async IaC generation
-      const response = await generateIaC({
-        prompt: prompt,
-        projectId: id,
-        umlDiagrams: umlDiagrams
-      });
-
-      if (response.jobId) {
-        setIacJobId(response.jobId)
-        setIacStatus("processing")
-        setIacProgress(20)
-        toast({
-          title: "Infrastructure generation started",
-          description: "Your infrastructure code is being generated. This may take a minute or two.",
-        })
-      } else {
-        setIacStatus("failed")
-        setError("Failed to start infrastructure code generation")
-        toast({
-          title: "Error",
-          description: "Failed to start infrastructure code generation",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error("Error in handleGenerateIaC:", error)
-      setIacStatus("failed")
-      setError(error instanceof Error ? error.message : "Failed to generate infrastructure code")
+  const executeGuidedFlow = async () => {
+    if (!project?.prompt) {
       toast({
         title: "Error",
+        description: "Project prompt is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setGuidedFlowStatus(prev => ({ ...prev, isProcessing: true, error: undefined }))
+
+    try {
+      const token = localStorage.getItem('token')
+      
+      // Step 1: Generate UML Diagrams
+        setGuidedFlowStatus(prev => ({ 
+          ...prev, 
+          step: 'diagrams',
+          progress: 25
+        }))
+
+      console.log('Generating UML diagrams...')
+      const umlResponse = await fetch(`${API_BASE_URL}/api/uml/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: project.prompt,
+          projectId: id
+        })
+      })
+
+      if (!umlResponse.ok) {
+        throw new Error('Failed to start UML generation')
+      }
+
+      const umlResult = await umlResponse.json()
+
+            setGuidedFlowStatus(prev => ({ 
+              ...prev, 
+        umlJobId: umlResult.jobId,
+        progress: 30
+      }))
+
+      // Poll for UML completion
+      const umlStatus = await pollJobStatus('/api/uml/status', umlResult.jobId)
+      
+      // Check if UML diagrams were generated successfully
+      if (!umlStatus || !umlStatus.result) {
+        throw new Error('Failed to generate UML diagrams')
+      }
+      
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        umlDiagrams: umlStatus.result,
+        progress: 40
+      }))
+
+      // Step 2: Generate Infrastructure Code
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        step: 'infrastructure',
+        progress: 45
+      }))
+
+      console.log('Generating infrastructure code...')
+      const iacResponse = await fetch(`${API_BASE_URL}/api/iac/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: project.prompt,
+          projectId: id,
+          umlDiagrams: umlStatus.result
+        })
+      })
+
+      if (!iacResponse.ok) {
+        throw new Error('Failed to start infrastructure generation')
+      }
+
+      const iacResult = await iacResponse.json()
+      
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        iacJobId: iacResult.jobId,
+        progress: 50
+      }))
+
+      // Poll for IaC completion
+      const iacStatus = await pollJobStatus('/api/iac/status', iacResult.jobId)
+      
+      // Check if infrastructure code was generated successfully
+      if (!iacStatus || !iacStatus.result) {
+        throw new Error('Failed to generate infrastructure code')
+      }
+
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        infraCode: iacStatus.result.terraformCode || iacStatus.result,
+        progress: 60
+      }))
+
+      // Step 3: Generate Application Code
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        step: 'application',
+        progress: 65
+      }))
+
+      console.log('Generating application code...')
+      const codeResponse = await fetch(`${API_BASE_URL}/api/code/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: project.prompt,
+          projectId: id,
+          umlDiagrams: umlStatus.result
+        })
+      })
+
+      if (!codeResponse.ok) {
+        throw new Error('Failed to generate application code')
+      }
+
+      const codeResult = await codeResponse.json()
+      
+      // Poll for code generation completion
+      const codeStatus = await pollJobStatus('/api/code/logs', codeResult.jobId)
+      
+      // Check if application code was generated successfully
+      if (!codeStatus || !codeStatus.result) {
+        throw new Error('Failed to generate application code')
+      }
+      
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        appCode: codeStatus.result,
+        progress: 80
+      }))
+
+      // Step 4: Deploy Infrastructure (optional)
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        step: 'deployment',
+        progress: 85
+      }))
+
+      // Infrastructure deployment can be triggered separately
+          setGuidedFlowStatus(prev => ({ 
+            ...prev, 
+            step: 'completed',
+            progress: 100,
+            isProcessing: false
+          }))
+
+          toast({
+        title: "Project Completed!",
+        description: "All code has been generated successfully.",
+          })
+
+          // Reload project data to show the new artifacts
+          await loadProject()
+
+    } catch (error) {
+      console.error('Error executing guided flow:', error)
+      setGuidedFlowStatus(prev => ({ 
+        ...prev, 
+        isProcessing: false, 
+        error: error instanceof Error ? error.message : 'Build process failed'
+      }))
+
+      toast({
+        title: "Build Failed",
+        description: error instanceof Error ? error.message : "An error occurred during the build process",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const getFileIcon = (filename: string) => {
+    if (filename.endsWith('.tsx') || filename.endsWith('.jsx')) {
+      return <Code2 className="h-4 w-4 text-blue-500" />
+    }
+    if (filename.endsWith('.ts') || filename.endsWith('.js')) {
+      return <Code2 className="h-4 w-4 text-yellow-500" />
+    }
+    if (filename.endsWith('.json')) {
+      return <FileText className="h-4 w-4 text-green-500" />
+    }
+    return <FileText className="h-4 w-4 text-gray-500" />
+  }
+
+  const organizeFiles = (files: Record<string, string>) => {
+    const organized: Record<string, string[]> = {}
+    
+    Object.keys(files).forEach(filePath => {
+      const parts = filePath.split('/')
+      const category = parts[0] || 'root'
+      
+      if (!organized[category]) {
+        organized[category] = []
+      }
+      organized[category].push(filePath)
+    })
+    
+    return organized
+  }
+
+  const handleGenerateUML = async () => {
+    if (!project?.prompt) {
+      toast({
+        title: "Error",
+        description: "Project prompt is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsGeneratingUML(true)
+    try {
+      const token = localStorage.getItem('token')
+      
+      toast({
+        title: "UML Generation Started",
+        description: "Generating UML diagrams...",
+      })
+      
+      const response = await fetch(`${API_BASE_URL}/api/uml/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: project.prompt,
+          projectId: id
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to start UML generation')
+      }
+
+      const result = await response.json()
+      
+      // Poll for completion
+      const status = await pollJobStatus('/api/uml/status', result.jobId)
+      
+      toast({
+        title: "UML Generation Complete",
+        description: "UML diagrams have been generated successfully",
+      })
+
+      // Reload project to show new diagrams
+      await loadProject()
+      
+    } catch (error) {
+      toast({
+        title: "UML Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate UML diagrams",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeneratingUML(false)
+    }
+  }
+
+  const handleGenerateInfrastructure = async () => {
+    if (!project?.prompt) {
+      toast({
+        title: "Error",
+        description: "Project prompt is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsGeneratingInfrastructure(true)
+    try {
+      const token = localStorage.getItem('token')
+      
+      toast({
+        title: "Infrastructure Generation Started",
+        description: "Generating infrastructure code...",
+      })
+      
+      const response = await fetch(`${API_BASE_URL}/api/iac/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: project.prompt,
+          projectId: id,
+          umlDiagrams: project.umlDiagrams
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to start infrastructure generation')
+      }
+
+      const result = await response.json()
+      
+      // Poll for completion
+      const status = await pollJobStatus('/api/iac/status', result.jobId)
+      
+      toast({
+        title: "Infrastructure Generation Complete",
+        description: "Infrastructure code has been generated successfully",
+      })
+
+      // Reload project to show new infrastructure
+      await loadProject()
+      
+    } catch (error) {
+      toast({
+        title: "Infrastructure Generation Failed",
         description: error instanceof Error ? error.message : "Failed to generate infrastructure code",
         variant: "destructive",
       })
-      setIsGeneratingIaC(false)
+    } finally {
+      setIsGeneratingInfrastructure(false)
     }
   }
 
-  // Add polling effect for IaC generation
-  useEffect(() => {
-    let pollingInterval: NodeJS.Timeout | null = null
-
-    const pollIaCStatus = async () => {
-      if (!iacJobId) return
-      try {
-        const statusResp = await getIaCJobStatus(iacJobId)
-        setIacStatus(statusResp.status)
-        let progress = iacProgress
-        if (statusResp.status === "processing") {
-          progress = Math.min(90, (statusResp.progress ?? 0) + 40)
-        } else if (statusResp.status === "completed") {
-          progress = 100
-        }
-        setIacProgress(progress)
-        if (statusResp.status === "completed") {
-          if (statusResp.result && statusResp.result.code) {
-            setTerraformConfig(statusResp.result.code)
-          } else {
-            setError("No infrastructure code was generated. Please try again.")
-          }
-          setIsGeneratingIaC(false)
-          setIacStatus("completed")
-          setIacProgress(100)
-          setIacJobId(null)
-        } else if (statusResp.status === "failed") {
-          setIsGeneratingIaC(false)
-          setIacStatus("failed")
-          setIacProgress(0)
-          setIacJobId(null)
-          if (statusResp.error) {
-            setError(statusResp.error)
-            toast({
-              title: "Error",
-              description: statusResp.error,
-              variant: "destructive",
-            })
-          }
-        }
-      } catch (err) {
-        console.error("[IaC Poll] Error polling infrastructure status:", err)
-        setIsGeneratingIaC(false)
-        setIacStatus("failed")
-        setIacProgress(0)
-        setIacJobId(null)
-        const errorMessage = err instanceof Error ? err.message : "Failed to poll infrastructure status. Please try again."
-        setError(errorMessage)
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        })
-      }
+  const handleRegenerateInfrastructure = async () => {
+    if (!project?.prompt) {
+      toast({
+        title: "Error",
+        description: "Project prompt is required",
+        variant: "destructive"
+      })
+      return
     }
 
-    if (iacJobId && (iacStatus === "pending" || iacStatus === "processing")) {
-      pollIaCStatus()
-      pollingInterval = setInterval(pollIaCStatus, 3000)
-    }
-
-    return () => {
-      if (pollingInterval) clearInterval(pollingInterval)
-    }
-  }, [iacJobId])
-
-  // Add polling effect for UML generation
-  useEffect(() => {
-    let pollingInterval: NodeJS.Timeout | null = null
-
-    const pollUmlStatus = async () => {
-      if (!umlJobId) return
-      try {
-        const statusResp = await getUmlJobStatus(umlJobId)
-        setUmlStatus(statusResp.status)
-        let progress = umlProgress
-        if (statusResp.status === "processing") {
-          progress = Math.min(90, (statusResp.progress ?? 0) + 40)
-        } else if (statusResp.status === "completed") {
-          progress = 100
-        }
-        setUmlProgress(progress)
-        if (statusResp.status === "completed") {
-          if (statusResp.result) {
-            // Process the result to extract all diagrams
-            const processedDiagrams = processDiagramResponse(statusResp.result)
-            console.log("Processed diagrams from async job:", processedDiagrams)
-
-            // Update state with the processed diagrams
-            if (Array.isArray(processedDiagrams) && processedDiagrams.length > 0) {
-              setProjectDiagrams(processedDiagrams)
-              setHasDiagrams(true)
-            } else {
-              setProjectDiagrams([])
-              setHasDiagrams(false)
-            }
-          } else {
-            setError("No diagrams were generated. Please try again.")
-          }
-          setIsGenerating(false)
-          setUmlStatus("completed")
-          setUmlProgress(100)
-          setUmlJobId(null)
-          toast({
-            title: "Diagrams generated",
-            description: "All diagrams have been generated successfully. You can now generate documentation.",
-          })
-        } else if (statusResp.status === "failed") {
-          setIsGenerating(false)
-          setUmlStatus("failed")
-          setUmlProgress(0)
-          setUmlJobId(null)
-          if (statusResp.error) {
-            setError(statusResp.error)
-            toast({
-              title: "Error",
-              description: statusResp.error,
-              variant: "destructive",
-            })
-          }
-        }
-      } catch (err) {
-        console.error("[UML Poll] Error polling diagram status:", err)
-        setIsGenerating(false)
-        setUmlStatus("failed")
-        setUmlProgress(0)
-        setUmlJobId(null)
-        const errorMessage = err instanceof Error ? err.message : "Failed to poll diagram status. Please try again."
-        setError(errorMessage)
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        })
-      }
-    }
-
-    if (umlJobId && (umlStatus === "pending" || umlStatus === "processing")) {
-      pollUmlStatus()
-      pollingInterval = setInterval(pollUmlStatus, 3000)
-    }
-
-    return () => {
-      if (pollingInterval) clearInterval(pollingInterval)
-    }
-  }, [umlJobId])
-
-  // Render the async generation status
-  const renderAsyncStatus = () => {
-    if (!asyncStatus) return null
-
-    let statusText = ""
-    let statusColor = ""
-
-    switch (asyncStatus) {
-      case "pending":
-        statusText = "Initializing documentation generation..."
-        statusColor = "text-blue-600 dark:text-blue-400"
-        break
-      case "processing":
-        statusText = "Generating documentation... This may take a minute or two."
-        statusColor = "text-blue-600 dark:text-blue-400"
-        break
-      case "completed":
-        statusText = "Documentation generated successfully!"
-        statusColor = "text-green-600 dark:text-green-400"
-        break
-      case "failed":
-        statusText = "Failed to generate documentation. Please try again."
-        statusColor = "text-red-600 dark:text-red-400"
-        break
-      default:
-        statusText = "Processing..."
-        statusColor = "text-blue-600 dark:text-blue-400"
-    }
-
-    return (
-      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-        <div className="flex items-center mb-2">
-          {asyncStatus === "failed" ? (
-            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-          ) : (
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-          )}
-          <p className={`text-sm font-medium ${statusColor}`}>{statusText}</p>
-        </div>
-        {asyncStatus !== "failed" && <Progress value={asyncProgress} className="h-2 mt-2" />}
-      </div>
-    )
-  }
-
-  // Render the IaC generation status
-  const renderIaCStatus = () => {
-    if (!iacStatus) return null
-
-    let statusText = ""
-    let statusColor = ""
-    let icon = <Loader2 className="h-5 w-5 animate-spin mr-2" />
-
-    switch (iacStatus) {
-      case "initializing":
-        statusText = "Initializing infrastructure generation..."
-        statusColor = "text-blue-600 dark:text-blue-400"
-        break
-      case "generating":
-        statusText = "Generating Terraform configuration... This may take a moment."
-        statusColor = "text-blue-600 dark:text-blue-400"
-        break
-      case "processing":
-        statusText = "Processing and validating infrastructure code..."
-        statusColor = "text-blue-600 dark:text-blue-400"
-        break
-      case "completed":
-        statusText = "Infrastructure code generated successfully!"
-        statusColor = "text-green-600 dark:text-green-400"
-        icon = <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-        break
-      case "failed":
-        statusText = error || "Failed to generate infrastructure code. Please try again."
-        statusColor = "text-red-600 dark:text-red-400"
-        icon = <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-        break
-      default:
-        statusText = "Processing..."
-        statusColor = "text-blue-600 dark:text-blue-400"
-    }
-
-    return (
-      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-        <div className="flex items-center mb-2">
-          {icon}
-          <p className={`text-sm font-medium ${statusColor}`}>{statusText}</p>
-        </div>
-        {iacStatus !== "failed" && (
-          <Progress value={iacProgress} className="h-2 mt-2" />
-        )}
-      </div>
-    )
-  }
-
-  // Render the UML generation status
-  const renderUmlStatus = () => {
-    if (!umlStatus) return null
-
-    let statusText = ""
-    let statusColor = ""
-    let icon = <Loader2 className="h-5 w-5 animate-spin mr-2" />
-
-    switch (umlStatus) {
-      case "pending":
-        statusText = "Initializing diagram generation..."
-        statusColor = "text-blue-600 dark:text-blue-400"
-        break
-      case "processing":
-        statusText = "Generating diagrams... This may take a minute or two."
-        statusColor = "text-blue-600 dark:text-blue-400"
-        break
-      case "completed":
-        statusText = "Diagrams generated successfully!"
-        statusColor = "text-green-600 dark:text-green-400"
-        icon = <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-        break
-      case "failed":
-        statusText = error || "Failed to generate diagrams. Please try again."
-        statusColor = "text-red-600 dark:text-red-400"
-        icon = <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-        break
-      default:
-        statusText = "Processing..."
-        statusColor = "text-blue-600 dark:text-blue-400"
-    }
-
-    return (
-      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-        <div className="flex items-center mb-2">
-          {icon}
-          <p className={`text-sm font-medium ${statusColor}`}>{statusText}</p>
-        </div>
-        {umlStatus !== "failed" && (
-          <Progress value={umlProgress} className="h-2 mt-2" />
-        )}
-      </div>
-    )
-  }
-
-  useEffect(() => {
-    let pollingInterval: NodeJS.Timeout | null = null
-
-    const pollStatus = async () => {
-      if (!asyncDocJobId) return
-      try {
-        const statusResp = await checkAsyncJobStatus(asyncDocJobId, id)
-        setAsyncStatus(statusResp.status)
-        setAsyncProgress(statusResp.progress ?? 0)
-        // Print status response for debugging
-        console.log("[Doc Poll] Status response:", statusResp)
-        if (statusResp.status === "completed") {
-          // Use the result directly from the status response
-          if (statusResp.result) {
-            if (typeof statusResp.result === "string") {
-              setDocumentation(statusResp.result)
-            } else if (statusResp.result.content) {
-              setDocumentation(statusResp.result.content)
-            } else {
-              setDocumentation(JSON.stringify(statusResp.result, null, 2))
-            }
-          } else {
-            setDocumentation("Documentation generated, but could not parse content.")
-          }
-          setIsGeneratingDocs(false)
-          setAsyncStatus("completed")
-          setAsyncProgress(100)
-          setAsyncDocJobId(null) // Stop polling
-          // Optionally, reload the project to get the latest documentations
-          loadProject()
-        } else if (statusResp.status === "failed") {
-          setIsGeneratingDocs(false)
-          setAsyncStatus("failed")
-          setAsyncProgress(0)
-          setAsyncDocJobId(null) // Stop polling
-          if (statusResp.error) {
-            setError(statusResp.error)
-          }
-        }
-      } catch (err) {
-        console.error("[Doc Poll] Error polling documentation status:", err)
-        setIsGeneratingDocs(false)
-        setAsyncStatus("failed")
-        setAsyncProgress(0)
-        setAsyncDocJobId(null)
-        setError("Failed to poll documentation status. Please try again.")
-      }
-    }
-
-    if (asyncDocJobId && (asyncStatus === "pending" || asyncStatus === "processing")) {
-      pollStatus() // Immediate first poll
-      pollingInterval = setInterval(pollStatus, 3000)
-    }
-
-    return () => {
-      if (pollingInterval) clearInterval(pollingInterval)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asyncDocJobId])
-
-  // Helper to extract diagrams from project or documentation
-  function extractDiagrams(source: any): any[] {
-    const umlDiagrams = source?.umlDiagrams || {}
-    return Object.entries(umlDiagrams)
-      .map(([key, value]) => {
-        let type
-        if (key.toLowerCase().includes("class")) type = "class"
-        else if (key.toLowerCase().includes("sequence")) type = "sequence"
-        else if (key.toLowerCase().includes("component")) type = "component"
-        else if (key.toLowerCase().includes("architecture"))
-          type = "component" // Map architecture to component
+    setIsGeneratingInfrastructure(true)
+    try {
+      const token = localStorage.getItem('token')
       
-        else if (key.toLowerCase().includes("integration")) type = "integration"
-        if (!type) return null
-        return {
-          type,
-          mermaid: value,
-          title:
-            key.charAt(0).toUpperCase() +
-            key
-              .slice(1)
-              .replace(/([A-Z])/g, " $1")
-              .trim() +
-            " Diagram",
-        }
+      toast({
+        title: "Infrastructure Regeneration Started",
+        description: "Regenerating infrastructure code with latest fixes...",
       })
-      .filter(Boolean)
+      
+      const response = await fetch(`${API_BASE_URL}/api/iac/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: project.prompt,
+          projectId: id,
+          umlDiagrams: project.umlDiagrams,
+          forceRegenerate: true // Force regeneration flag
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to start infrastructure regeneration')
+      }
+
+      const result = await response.json()
+      
+      // Poll for completion
+      const status = await pollJobStatus('/api/iac/status', result.jobId)
+      
+      toast({
+        title: "Infrastructure Regeneration Complete",
+        description: "Infrastructure code has been regenerated with improvements",
+      })
+
+      // Reload project to show updated infrastructure
+      await loadProject()
+      
+    } catch (error) {
+      toast({
+        title: "Infrastructure Regeneration Failed",
+        description: error instanceof Error ? error.message : "Failed to regenerate infrastructure code",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeneratingInfrastructure(false)
+    }
   }
 
-  useEffect(() => {
-    if (project && projectDiagrams.length > 0) {
-      // Build a new umlDiagrams object from
-      projectDiagrams
-      const umlDiagrams: Record<string, string> = {}
-      projectDiagrams.forEach((diagram) => {
-        if (diagram.diagramData) {
-          let key = ""
-          if (diagram.diagramType.toLowerCase().includes("class")) key = "class"
-          else if (diagram.diagramType.toLowerCase().includes("sequence")) key = "sequence"
-          else if (diagram.diagramType.toLowerCase().includes("component")) key = "component"
-          else if (diagram.diagramType.toLowerCase().includes("architecture")) key = "architecture"
-          if (key) umlDiagrams[key] = diagram.diagramData
-        }
+  const handleGenerateCode = async () => {
+    if (!project?.prompt) {
+      toast({
+        title: "Error",
+        description: "Project prompt is required",
+        variant: "destructive"
       })
-      setProject({ ...project, umlDiagrams })
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectDiagrams])
 
+    setIsGeneratingCode(true)
+    try {
+      const token = localStorage.getItem('token')
 
-  if (!isAuthenticated || isLoading) {
+      // Purge old app code before generating new code
+      await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ appCode: null })
+      })
+
+      toast({
+        title: project?.appCode ? "Regeneration Started" : "Code Generation Started",
+        description: project?.appCode ? "Regenerating application code..." : "Generating application code...",
+      })
+
+      const response = await fetch(`${API_BASE_URL}/api/code/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: project.prompt,
+          projectId: id,
+          umlDiagrams: project.umlDiagrams
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate application code')
+      }
+
+      const result = await response.json()
+
+      // Poll for completion
+      const status = await pollJobStatus('/api/code/logs', result.jobId)
+
+      toast({
+        title: "Code Generation Complete",
+        description: "Application code has been generated successfully",
+      })
+
+      // Reload project to show new code
+      await loadProject()
+
+    } catch (error) {
+      toast({
+        title: "Code Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate application code",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeneratingCode(false)
+    }
+  }
+
+  const updateProjectPrompt = async () => {
+    if (!editPrompt.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid prompt",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsUpdatingPrompt(true)
+    try {
+      // Get the token from localStorage
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No authentication token found')
+      }
+
+      // Update project prompt via API
+      const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ prompt: editPrompt })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update project prompt')
+      }
+
+      const updatedProject = await response.json()
+      setProject(prev => prev ? { ...prev, prompt: editPrompt } : null)
+      setShowPromptDialog(false)
+      setEditPrompt("")
+
+      toast({
+        title: "Success",
+        description: "Project prompt updated successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update project prompt",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUpdatingPrompt(false)
+    }
+  }
+
+  const renderPromptSection = () => {
+    if (!project?.prompt) {
+      return (
+        <Card className="mb-6 border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <AlertCircle className="h-5 w-5" />
+              Missing Project Requirements
+            </CardTitle>
+            <CardDescription className="text-orange-700">
+              This project doesn't have detailed requirements. Add a prompt to enable AI-powered features.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => {
+                setEditPrompt("")
+                setShowPromptDialog(true)
+              }}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Project Requirements
+            </Button>
+          </CardContent>
+        </Card>
+      )
+    }
+
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Project Requirements
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditPrompt(project.prompt || "")
+                setShowPromptDialog(true)
+              }}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm whitespace-pre-wrap">{project.prompt}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const renderFlowSelector = () => (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Choose Your Development Flow</CardTitle>
+        <CardDescription>
+          Select how you want to approach building your application
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${flowMode === 'expert' ? 'ring-2 ring-blue-500' : ''}`}
+            onClick={() => setFlowMode('expert')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <User className="h-8 w-8 text-blue-500" />
+                <div>
+                  <h3 className="font-semibold">Expert Mode</h3>
+                  <Badge variant="outline">Full Control</Badge>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Step-by-step control over diagrams, infrastructure code, application code, and deployment. 
+                Perfect for developers who want to customize every aspect.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="secondary">Diagrams</Badge>
+                <Badge variant="secondary">Infrastructure</Badge>
+                <Badge variant="secondary">App Code</Badge>
+                <Badge variant="secondary">Deployment</Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${flowMode === 'guided' ? 'ring-2 ring-green-500' : ''}`}
+            onClick={() => setFlowMode('guided')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <Wand2 className="h-8 w-8 text-green-500" />
+                <div>
+                  <h3 className="font-semibold">Guided Mode</h3>
+                  <Badge variant="outline">Automated</Badge>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                AI-powered end-to-end automation. Provide your requirements and we'll handle 
+                everything from architecture to deployment automatically.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="secondary">AI Summary</Badge>
+                <Badge variant="secondary">Auto Deploy</Badge>
+                <Badge variant="secondary">Zero Config</Badge>
+                <Badge variant="secondary">Fast Setup</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const renderGuidedFlow = () => (
+    <div className="space-y-6">
+      {/* Progress Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wand2 className="h-5 w-5 text-green-500" />
+            Guided Development Pipeline
+          </CardTitle>
+          <CardDescription>
+            Automated end-to-end application development and deployment
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${guidedFlowStatus.progress}%` }}
+              />
+            </div>
+            
+            {/* Current Step */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                Step: {guidedFlowStatus.step.charAt(0).toUpperCase() + guidedFlowStatus.step.slice(1)}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {guidedFlowStatus.progress}% Complete
+              </span>
+            </div>
+
+            {/* Step Indicators */}
+            <div className="grid grid-cols-6 gap-2 text-xs">
+              {[
+                { step: 'summary', label: 'Summary', icon: Eye },
+                { step: 'diagrams', label: 'Diagrams', icon: Layers },
+                { step: 'infrastructure', label: 'Infrastructure', icon: Cloud },
+                { step: 'application', label: 'Application', icon: Code2 },
+                { step: 'deployment', label: 'Deployment', icon: Rocket },
+                { step: 'documentation', label: 'Docs', icon: FileText }
+              ].map(({ step, label, icon: Icon }) => {
+                const isCompleted = ['summary', 'diagrams', 'infrastructure', 'application', 'deployment', 'documentation'].indexOf(guidedFlowStatus.step) > ['summary', 'diagrams', 'infrastructure', 'application', 'deployment', 'documentation'].indexOf(step)
+                const isCurrent = guidedFlowStatus.step === step
+                
+                return (
+                  <div key={step} className={`flex flex-col items-center p-2 rounded ${
+                    isCompleted ? 'bg-green-100 text-green-600' :
+                    isCurrent ? 'bg-blue-100 text-blue-600' : 
+                    'bg-gray-100 text-gray-400'
+                  }`}>
+                    <Icon className="h-4 w-4 mb-1" />
+                    <span>{label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Step Content */}
+      {guidedFlowStatus.step === 'summary' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Summary & Confirmation</CardTitle>
+            <CardDescription>
+              Review what we're going to build based on your requirements
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {!guidedFlowStatus.summary ? (
+              <div className="text-center py-8">
+                <Button 
+                  onClick={generateProjectSummary}
+                  disabled={guidedFlowStatus.isProcessing}
+                  size="lg"
+                >
+                  {guidedFlowStatus.isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analyzing Requirements...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="mr-2 h-4 w-4" />
+                      Generate Project Summary
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">{guidedFlowStatus.summary?.title || 'Project Summary'}</h3>
+                  <p className="text-muted-foreground">{guidedFlowStatus.summary?.description || 'No description available'}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium mb-3">Key Features</h4>
+                    <ul className="space-y-2">
+                      {(guidedFlowStatus.summary?.features || []).map((feature, index) => (
+                        <li key={index} className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium mb-3">Technology Stack</h4>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {(guidedFlowStatus.summary?.techStack || []).map((tech, index) => (
+                        <Badge key={index} variant="outline">{tech}</Badge>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Estimated Cost:</span>
+                        <span className="font-medium">{guidedFlowStatus.summary?.estimatedCost || 'To be calculated'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Timeline:</span>
+                        <span className="font-medium">{guidedFlowStatus.summary?.timeline || 'To be determined'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center pt-4">
+                  <Button 
+                    onClick={executeGuidedFlow}
+                    disabled={guidedFlowStatus.isProcessing}
+                    size="lg"
+                    className="min-w-48"
+                  >
+                    {guidedFlowStatus.isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Building Your App...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Start Building
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {guidedFlowStatus.step !== 'summary' && guidedFlowStatus.step !== 'completed' && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-blue-500" />
+            <h3 className="text-lg font-semibold mb-2">
+              Processing: {guidedFlowStatus.step.charAt(0).toUpperCase() + guidedFlowStatus.step.slice(1)}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {guidedFlowStatus.step === 'diagrams' && "Generating architecture diagrams..."}
+              {guidedFlowStatus.step === 'infrastructure' && "Creating infrastructure code..."}
+              {guidedFlowStatus.step === 'application' && "Building application code..."}
+              {guidedFlowStatus.step === 'deployment' && "Deploying to cloud..."}
+              {guidedFlowStatus.step === 'documentation' && "Generating documentation..."}
+            </p>
+
+            {/* Show error if any */}
+            {guidedFlowStatus.error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded text-left max-w-md mx-auto">
+                <div className="flex items-center gap-2 text-red-600 mb-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">Error Occurred</span>
+                </div>
+                <p className="text-sm text-red-700">{guidedFlowStatus.error}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={() => setGuidedFlowStatus(prev => ({ ...prev, error: undefined }))}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {guidedFlowStatus.step === 'completed' && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-500" />
+            <h3 className="text-xl font-semibold mb-2">Application Generated Successfully!</h3>
+            <p className="text-muted-foreground mb-6">
+              Your application code has been generated. You can now view the diagrams, infrastructure code, and application code.
+            </p>
+            <div className="flex justify-center gap-4">
+              <Button onClick={() => setFlowMode('expert')} variant="outline">
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </Button>
+              <Button onClick={() => setActiveTab('infrastructure')}>
+                <ArrowRight className="mr-2 h-4 w-4" />
+                Deploy Infrastructure
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+
+  const renderExpertMode = () => (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-5">
+        <TabsTrigger value="overview" className="flex items-center gap-2">
+          <Eye className="h-4 w-4" />
+          Overview
+        </TabsTrigger>
+        <TabsTrigger value="diagrams" className="flex items-center gap-2">
+          <Layers className="h-4 w-4" />
+          Diagrams
+        </TabsTrigger>
+        <TabsTrigger value="design" className="flex items-center gap-2">
+          <Palette className="h-4 w-4" />
+          Design Doc
+        </TabsTrigger>
+        <TabsTrigger value="infrastructure" className="flex items-center gap-2">
+          <Cloud className="h-4 w-4" />
+          Infrastructure
+        </TabsTrigger>
+        <TabsTrigger value="application" className="flex items-center gap-2">
+          <Rocket className="h-4 w-4" />
+          Application
+        </TabsTrigger>
+      </TabsList>
+
+      {/* Overview Tab */}
+      <TabsContent value="overview" className="space-y-4">
+        {/* Project Status Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Project Status Overview
+            </CardTitle>
+            <CardDescription>
+              Track the progress of your project artifacts and see what's ready to use
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Progress Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Diagrams Status */}
+              <Card className={`${project?.umlDiagrams ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Layers className={`h-5 w-5 ${project?.umlDiagrams ? 'text-green-600' : 'text-gray-400'}`} />
+                      <span className="font-medium">UML Diagrams</span>
+                    </div>
+                    {project?.umlDiagrams ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Clock className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {project?.umlDiagrams 
+                      ? 'Architecture diagrams available' 
+                      : 'Generate visual system architecture'
+                    }
+                  </p>
+                  {project?.umlDiagrams ? (
+                    <Button variant="outline" size="sm" onClick={() => setActiveTab('diagrams')}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Diagrams
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={handleGenerateUML}>
+                      <Layers className="h-4 w-4 mr-2" />
+                      Generate
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Infrastructure Status */}
+              <Card className={`${project?.infraCode ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Cloud className={`h-5 w-5 ${project?.infraCode ? 'text-green-600' : 'text-gray-400'}`} />
+                      <span className="font-medium">Infrastructure</span>
+                    </div>
+                    {project?.infraCode ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Clock className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {project?.infraCode 
+                      ? `Terraform code ready (${typeof project.infraCode === 'string' ? Math.round(project.infraCode.length / 100) : 'Unknown'} lines)` 
+                      : 'Generate cloud infrastructure code'
+                    }
+                  </p>
+                  {project?.infraCode ? (
+                    <div className="flex flex-col gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setActiveTab('infrastructure')}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View & Deploy
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleRegenerateInfrastructure}
+                        disabled={isGeneratingInfrastructure}
+                        className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                      >
+                        {isGeneratingInfrastructure ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Regenerating...
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Regenerate Infrastructure
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={handleGenerateInfrastructure}>
+                      <Cloud className="h-4 w-4 mr-2" />
+                      Generate
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Application Code Status */}
+              <Card className={`${project?.appCode ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Code2 className={`h-5 w-5 ${project?.appCode ? 'text-green-600' : 'text-gray-400'}`} />
+                      <span className="font-medium">Application Code</span>
+                    </div>
+        {project?.appCode ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Clock className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {project?.appCode 
+                      ? 'Full-stack application code ready' 
+                      : 'Generate complete application code'
+                    }
+                  </p>
+                  {project?.appCode ? (
+                    <Button variant="outline" size="sm" onClick={() => setActiveTab('application')}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View & Deploy
+                    </Button>
+                  ) : (
+                    <Button onClick={handleGenerateCode} disabled={isGeneratingCode}>
+                      {isGeneratingCode ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Rocket className="h-4 w-4 mr-2" />
+                          Generate Application Code
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Overall Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Overall Progress</span>
+                <span className="text-sm text-muted-foreground">
+                  {[project?.umlDiagrams, project?.infraCode, project?.appCode].filter(Boolean).length}/3 Complete
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${([project?.umlDiagrams, project?.infraCode, project?.appCode].filter(Boolean).length / 3) * 100}%` 
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Next Steps */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ArrowRight className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-900">Next Steps</span>
+              </div>
+              <div className="text-sm text-blue-800 space-y-1">
+                {!project?.umlDiagrams && (
+                  <p>• Generate UML diagrams to visualize your system architecture</p>
+                )}
+                {project?.umlDiagrams && !project?.infraCode && (
+                  <p>• Generate infrastructure code based on your diagrams</p>
+                )}
+                {project?.infraCode && !project?.appCode && (
+                  <p>• Generate application code for your complete system</p>
+                )}
+                {project?.appCode && project?.infraCode && (
+                  <p>• Deploy your infrastructure and application to the cloud</p>
+                )}
+                {!project?.prompt && (
+                  <p>• Add detailed project requirements to enable AI-powered generation</p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-3">
+              {!project?.umlDiagrams && (
+                <Button onClick={handleGenerateUML} className="flex-1 min-w-fit">
+                  <Layers className="h-4 w-4 mr-2" />
+                  Generate Diagrams
+                </Button>
+              )}
+              {project?.umlDiagrams && !project?.infraCode && (
+                <Button onClick={handleGenerateInfrastructure} className="flex-1 min-w-fit">
+                  <Cloud className="h-4 w-4 mr-2" />
+                  Generate Infrastructure
+                </Button>
+              )}
+              {project?.umlDiagrams && project?.infraCode && !project?.appCode && (
+                <Button onClick={handleGenerateCode} disabled={isGeneratingCode} className="flex-1 min-w-fit">
+                  {isGeneratingCode ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Code2 className="h-4 w-4 mr-2" />
+                      Generate App Code
+                    </>
+                  )}
+                </Button>
+              )}
+              {(project?.umlDiagrams || project?.infraCode || project?.appCode) && (
+                <Button variant="outline" onClick={() => setFlowMode('guided')} className="flex-1 min-w-fit">
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Try Guided Flow
+                </Button>
+              )}
+            </div>
+
+            {/* Detailed Project Overview for Complete Projects */}
+            {project?.appCode && project.appCode.validation && project.appCode.buildConfig && (
+              <div className="mt-6 pt-6 border-t">
+            <ProjectOverview 
+              appCode={project.appCode as any}
+              projectId={id}
+              onDeploy={() => setActiveTab("application")}
+              onDownload={() => {
+                toast({
+                  title: "Download Started",
+                  description: "Preparing project files for download...",
+                })
+              }}
+            />
+              </div>
+            )}
+              </CardContent>
+            </Card>
+      </TabsContent>
+
+      {/* Diagrams Tab */}
+      <TabsContent value="diagrams" className="space-y-4">
+        {(() => {
+          // Debug logging for diagram data
+          console.log("Diagrams tab - project.umlDiagrams:", project?.umlDiagrams)
+          console.log("Diagrams type:", typeof project?.umlDiagrams)
+          
+          if (project?.umlDiagrams) {
+            // Check if it's an enhanced UML object with multiple diagram types
+            const isEnhancedFormat = typeof project.umlDiagrams === 'object' && 
+              !Array.isArray(project.umlDiagrams) &&
+              Object.keys(project.umlDiagrams).some(key => 
+                ['class', 'sequence', 'component', 'uiComponent', 'architecture', 'entity'].includes(key)
+              )
+            
+            console.log("Is enhanced format:", isEnhancedFormat)
+            console.log("Available diagram types:", Object.keys(project.umlDiagrams))
+            
+            if (isEnhancedFormat) {
+              // Enhanced format - pass the whole object
+              return (
+                <DiagramTabs 
+                  diagrams={project.umlDiagrams} 
+                  isGenerating={isGeneratingUML}
+                  onRegenerateAll={handleGenerateUML}
+                />
+              )
+            } else if (Array.isArray(project.umlDiagrams)) {
+              // Legacy array format
+              return (
+                <DiagramTabs 
+                  diagrams={project.umlDiagrams} 
+                  isGenerating={isGeneratingUML}
+                  onRegenerateAll={handleGenerateUML}
+                />
+              )
+            } else {
+              // Single diagram or string format - convert to enhanced format
+              const convertedDiagrams = {
+                class: typeof project.umlDiagrams === 'string' ? project.umlDiagrams : JSON.stringify(project.umlDiagrams)
+              }
+              return (
+                <DiagramTabs 
+                  diagrams={convertedDiagrams} 
+                  isGenerating={isGeneratingUML}
+                  onRegenerateAll={handleGenerateUML}
+                />
+              )
+            }
+          }
+          
+          return (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Layers className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Diagrams Available</h3>
+                <p className="text-muted-foreground mb-4">
+                  Generate UML diagrams from your project prompt to visualize the architecture.
+                </p>
+                <Button 
+                  onClick={handleGenerateUML}
+                  variant="outline"
+                >
+                  <Layers className="h-4 w-4 mr-2" />
+                  Generate Diagrams
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        })()}
+      </TabsContent>
+
+      {/* Design Documentation Tab */}
+      <TabsContent value="design" className="space-y-4">
+        {project?.designDocument ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Design Documentation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose max-w-none">
+                <h2>{project.designDocument.metadata?.title || 'Design Document'}</h2>
+                <p>{project.designDocument.executive_summary}</p>
+                {/* Add more documentation sections as needed */}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="text-center py-12">
+              <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Design Document Available</h3>
+              <p className="text-gray-600 mb-6">
+                Design documentation will be generated during the project creation process
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </TabsContent>
+
+      {/* Infrastructure Tab */}
+      <TabsContent value="infrastructure" className="space-y-4">
+        {project?.infraCode ? (
+          <>
+            {/* Infrastructure Actions Header */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Cloud className="h-5 w-5" />
+                    Infrastructure Code
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRegenerateInfrastructure}
+                    disabled={isGeneratingInfrastructure}
+                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                  >
+                    {isGeneratingInfrastructure ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Regenerate Infrastructure
+                      </>
+                    )}
+                  </Button>
+                </CardTitle>
+                <CardDescription>
+                  Deploy your infrastructure to AWS or regenerate with latest improvements
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            
+          <InfrastructureDeployment 
+            projectId={id}
+            iacCode={project.infraCode}
+            onDeploymentComplete={(outputs) => {
+              toast({
+                title: "Infrastructure Deployed",
+                description: "Infrastructure has been successfully deployed!",
+              })
+            }}
+          />
+          </>
+        ) : (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Cloud className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Infrastructure Code Available</h3>
+              <p className="text-gray-600 mb-6">
+                Generate infrastructure code based on your project requirements
+              </p>
+              <Button onClick={handleGenerateInfrastructure}>
+                <Cloud className="h-4 w-4 mr-2" />
+                Generate Infrastructure Code
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </TabsContent>
+
+      {/* Application Development Tab */}
+      <TabsContent value="application" className="space-y-4">
+        {project?.appCode ? (
+          project.appCode.validation && project.appCode.buildConfig ? (
+            <AppDevelopment 
+              projectId={id}
+              appCode={project.appCode}
+              projectPrompt={project.prompt}
+              umlDiagrams={project.umlDiagrams}
+              infraCode={project.infraCode}
+              onCodeChange={(updatedCode) => {
+                // Update project with new code
+                if (project) {
+                  setProject({ ...project, appCode: updatedCode })
+                }
+              }}
+            />
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Rocket className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Legacy App Code Format</h3>
+                <p className="text-gray-600 mb-6">
+                  Application code exists but needs to be regenerated for the development pipeline
+                </p>
+                <Button onClick={handleGenerateCode} disabled={isGeneratingCode}>
+                  {isGeneratingCode ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Regenerating...
+                    </>
+                  ) : (
+                    <>Regenerate Application Code</>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        ) : (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Rocket className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Application Code Available</h3>
+              <p className="text-gray-600 mb-6">
+                Generate application code first to access the development pipeline
+              </p>
+              <Button onClick={handleGenerateCode} disabled={isGeneratingCode}>
+                {isGeneratingCode ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>Generate Application Code</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </TabsContent>
+
+      {/* Code Tab */}
+      {/* REMOVED: The Code tab and its content */}
+    </Tabs>
+  )
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
@@ -1149,390 +1663,101 @@ export default function ProjectPageClient({ id }: { id: string }) {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Error</h2>
-          <p className="text-gray-500 mb-4">{error}</p>
-          <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!project) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Project not found</h2>
-          <p className="text-gray-500 mb-4">The project you're looking for doesn't exist or has been deleted.</p>
-          <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
-        </div>
-      </div>
-    )
-  }
-
-  console.log("[DEBUG] Render: project:", project)
-
-  return (
-    <div className="flex min-h-screen flex-col">
-      <DashboardHeader title={project?.name || "Project"} />
-      {isOffline && <ConnectionStatus isOffline={isOffline} />}
-      <main className="flex-1 container py-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">{project?.name}</h1>
-            <p className="text-gray-500 dark:text-gray-400">{project?.description}</p>
-          </div>
-          <Button variant="outline" onClick={() => router.push("/dashboard")}>
-            Back to Dashboard
-          </Button>
-        </div>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Project Prompt</CardTitle>
-            <CardDescription>
-              Describe your system to generate or update diagrams, documentation, and code.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              placeholder="Describe your system. For example: 'Generate diagrams for an e-commerce system with users, products, and orders.'"
-              className="min-h-[120px]"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={handleGenerateDiagrams} disabled={isGenerating}>
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Diagrams...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Generate Diagrams
-                  </>
-                )}
-              </Button>
-
-              {hasDiagrams && (
-                <>
-                  <Button
-                    onClick={handleGenerateDocumentation}
-                    disabled={isGeneratingDocs || !hasDiagrams || isGenerating}
-                    variant="outline"
-                  >
-                    {isGeneratingDocs ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Documentation...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate Documentation
-                      </>
-                    )}
-                  </Button>
-
-                  <Button onClick={handleGenerateIaC} disabled={isGeneratingIaC || isGenerating} variant="outline">
-                    {isGeneratingIaC ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Infrastructure...
-                      </>
-                    ) : (
-                      <>
-                        <Code2 className="mr-2 h-4 w-4" />
-                        Generate Infrastructure
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
-            </div>
+      <div className="container mx-auto p-4">
+        <DashboardHeader />
+        <Card className="mt-8">
+          <CardContent className="p-8 text-center">
+            <p className="text-red-500">{error}</p>
+            <Button onClick={() => router.push("/dashboard")} className="mt-4">
+              Back to Dashboard
+            </Button>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
 
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <CardHeader className="pb-0 pt-4">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="diagrams">Diagrams</TabsTrigger>
-                  <TabsTrigger value="documentation">Documentation</TabsTrigger>
-                  <TabsTrigger value="iac">Infrastructure</TabsTrigger>
-                  <TabsTrigger value="deploy">Deploy</TabsTrigger>
-                  <TabsTrigger value="code">Application Code</TabsTrigger>
-                </TabsList>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <TabsContent value="diagrams" className="mt-0">
-                  {isGenerating ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Generating Diagrams</h3>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                        Please wait while we generate diagrams based on your prompt...
-                      </p>
-                      {renderUmlStatus()}
-                    </div>
-                  ) : Array.isArray(projectDiagrams) &&
-                    projectDiagrams.length > 0 &&
-                    projectDiagrams.some((d) => d.diagramData) ? (
-                    <>
-                      <DiagramTabs
-                        diagrams={projectDiagrams}
-                        isGenerating={isGenerating}
-                        onRegenerateAll={handleGenerateDiagrams}
-                      />
-                      {hasDiagrams && !documentation && (
-                        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md flex items-center">
-                          <CheckCircle className="h-5 w-5 text-blue-500 mr-2" />
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
-                            Diagrams look good? Generate documentation based on these diagrams.
-                          </p>
-                          <Button
-                            size="sm"
-                            className="ml-auto"
-                            onClick={handleGenerateDocumentation}
-                            disabled={isGeneratingDocs}
-                          >
-                            {isGeneratingDocs ? (
-                              <>
-                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                Generating...
-                              </>
-                            ) : (
-                              "Generate Docs"
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-800 mb-4">
-                        <BarChart2 className="h-6 w-6" />
-                      </div>
-                      <h3 className="text-lg font-medium mb-2">No diagrams yet</h3>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                        Enter a prompt and click "Generate Diagrams" to create diagrams for your project.
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="documentation" className="mt-0">
-                  {(() => {
-                    // Log for debugging
-                    console.log("[Documentation Render] documentation:", documentation)
-
-                    // Helper to extract markdown string
-                    function extractMarkdown(doc: any) {
-                      if (!doc) return ""
-                      if (typeof doc === "string") return doc
-                      if (typeof doc === "object" && doc.content && typeof doc.content === "string") return doc.content
-                      // If it's a full design doc object, try to convert to markdown (fallback)
-                      if (typeof doc === "object") return JSON.stringify(doc, null, 2)
-                      return ""
-                    }
-
-                    // Prefer the documentation from project.documentation
-                    const docString =
-                      extractMarkdown(documentation) ||
-                      extractMarkdown(project && project.documentation && project.documentation.result)
-
-                    if (isGeneratingDocs) {
-                      return (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                          <h3 className="text-lg font-medium mb-2">Generating Documentation</h3>
-                          <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                            Please wait while we generate comprehensive documentation based on your diagrams...
-                          </p>
-                          {renderAsyncStatus()}
-                        </div>
-                      )
-                    } else if (docString && docString.trim() !== "") {
-                      // Prefer documentation object, then project, then documentation variable
-                      const docSource = project
-                      const diagrams = extractDiagrams(docSource)
-                      return <DocumentationWithTOC content={docString} diagrams={diagrams} />
-                    }
-                    return (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-800 mb-4">
-                          <FileText className="h-6 w-6" />
-                        </div>
-                        <h3 className="text-lg font-medium mb-2">No documentation yet</h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                          Click 'Generate Documentation' to create documentation based on your diagrams.
-                        </p>
-                        {hasDiagrams && (
-                          <Button onClick={handleGenerateDocumentation} disabled={isGeneratingDocs}>
-                            {isGeneratingDocs ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Generate Documentation
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    )
-                  })()}
-                </TabsContent>
-
-                <TabsContent value="iac" className="mt-0">
-                  {isGeneratingIaC ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Generating Infrastructure Code</h3>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                        Please wait while we generate your Terraform configuration based on your diagrams...
-                      </p>
-                      {renderIaCStatus()}
-                    </div>
-                  ) : terraformConfig ? (
-                    <div className="space-y-4">
-                      <div className="flex justify-end mb-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            navigator.clipboard.writeText(terraformConfig);
-                            toast({
-                              title: "Copied",
-                              description: "Infrastructure code copied to clipboard",
-                            });
-                          }}
-                        >
-                          Copy Code
-                        </Button>
-                      </div>
-                      <IaCCodeDisplay code={terraformConfig} />
-                      {iacStatus && iacStatus !== "completed" && renderIaCStatus()}
-                      
-                      {/* Quick Deploy Section */}
-                      <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                            <div>
-                              <h4 className="font-medium text-green-800 dark:text-green-200">Ready to Deploy</h4>
-                              <p className="text-sm text-green-600 dark:text-green-300">
-                                Your infrastructure code is ready. Deploy it to AWS with one click.
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={() => setActiveTab("deploy")}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <Cloud className="w-4 h-4 mr-2" />
-                            Deploy Infrastructure
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-800 mb-4">
-                        <Code2 className="h-6 w-6" />
-                      </div>
-                      <h3 className="text-lg font-medium mb-2">No infrastructure code yet</h3>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                        {error || "Click 'Generate Infrastructure' to create Terraform configuration."}
-                      </p>
-                      {hasDiagrams && !isGeneratingIaC && (
-                        <Button onClick={handleGenerateIaC} disabled={isGeneratingIaC || isGenerating}>
-                          {isGeneratingIaC ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Code2 className="mr-2 h-4 w-4" />
-                              Generate Infrastructure
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="deploy" className="mt-0">
-                  <Tabs defaultValue="infrastructure" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
-                      <TabsTrigger value="infrastructure">Infrastructure</TabsTrigger>
-                      <TabsTrigger value="application">Application</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="infrastructure">
-                      {terraformConfig ? (
-                        <InfrastructureDeployment
-                          projectId={id}
-                          iacCode={terraformConfig}
-                          onDeploymentComplete={(outputs) => {
-                            console.log("Deployment completed with outputs:", outputs)
-                            toast({
-                              title: "Deployment Complete",
-                              description: "Your infrastructure has been successfully deployed!",
-                            })
-                          }}
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-800 mb-4">
-                            <Cloud className="h-6 w-6" />
-                          </div>
-                          <h3 className="text-lg font-medium mb-2">No Infrastructure Code</h3>
-                          <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-                            Generate infrastructure code first to deploy your infrastructure.
-                          </p>
-                          <Button 
-                            onClick={() => setActiveTab("iac")}
-                            variant="outline"
-                          >
-                            Go to Infrastructure
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-                    <TabsContent value="application">
-                      <ApplicationDeployment projectId={id} />
-                    </TabsContent>
-                  </Tabs>
-                </TabsContent>
-
-                <TabsContent value="code" className="mt-0">
-                  <div className="grid grid-cols-1 gap-8">
-                    {project && <GenerateAppCode project={project} onCodeGenerated={setGeneratedCode} />}
-                    {generatedCode && (
-                      <CodeEditor
-                        code={generatedCode.documentation}
-                        onChange={(updatedCode: string | undefined) => {
-                          // TODO: Implement save functionality
-                          console.log("Saving updated code:", updatedCode)
-                        }}
-                      />
-                    )}
-                  </div>
-                </TabsContent>
-              </CardContent>
-            </Tabs>
-          </Card>
+  return (
+    <div className="container mx-auto p-4">
+      <DashboardHeader />
+      
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">{project?.name || "Project"}</h1>
+            <p className="text-muted-foreground mt-1">{project?.description || "No description provided"}</p>
+          </div>
+          
+          {flowMode && (
+            <div className="flex items-center gap-2">
+              <Badge variant={flowMode === 'expert' ? 'default' : 'secondary'}>
+                {flowMode === 'expert' ? 'Expert Mode' : 'Guided Mode'}
+              </Badge>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setFlowMode(null)}
+              >
+                Switch Mode
+              </Button>
+            </div>
+          )}
         </div>
-      </main>
+
+        {renderPromptSection()}
+
+        {!flowMode && renderFlowSelector()}
+        {flowMode === 'guided' && renderGuidedFlow()}
+        {flowMode === 'expert' && renderExpertMode()}
+      </div>
+
+      {/* Prompt Edit Dialog */}
+      <Dialog open={showPromptDialog} onOpenChange={setShowPromptDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {project?.prompt ? 'Edit Project Requirements' : 'Add Project Requirements'}
+            </DialogTitle>
+            <DialogDescription>
+              Describe what you want to build in detail. This will be used to generate diagrams, code, and infrastructure.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-prompt">
+                Project Requirements
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <Textarea
+                id="edit-prompt"
+                value={editPrompt}
+                onChange={(e) => setEditPrompt(e.target.value)}
+                placeholder="Describe what you want to build in detail:&#10;&#10;Example:&#10;- Build an e-commerce platform with user authentication&#10;- Include product catalog, shopping cart, and payment processing&#10;- Support multiple payment methods (Stripe, PayPal)&#10;- Admin dashboard for inventory management&#10;- Email notifications for orders&#10;- Mobile-responsive design"
+                className="min-h-[200px] resize-none"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Be specific about features, technologies, and requirements.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPromptDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={updateProjectPrompt} disabled={isUpdatingPrompt || !editPrompt.trim()}>
+              {isUpdatingPrompt ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                project?.prompt ? 'Update Requirements' : 'Add Requirements'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
-}
+} 
