@@ -5,14 +5,13 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart2, Github, Loader2, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { loginUser } from "@/lib/api/auth"
-import { ApiError } from "@/lib/api/client"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -21,28 +20,47 @@ export default function LoginPage() {
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      await loginUser({ email, password })
-
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully.",
+      console.log("Attempting login with:", { email, password })
+      
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       })
 
-      // Redirect to dashboard
-      router.push("/dashboard")
+      const data = await response.json()
+      console.log("Login response:", { status: response.status, data })
+
+      if (response.ok) {
+        // Use auth context to store token and user data
+        if (data.token && data.user) {
+          login(data.token, data.user)
+        }
+
+        toast({
+          title: "Login successful",
+          description: "You have been logged in successfully.",
+        })
+
+        // Redirect to dashboard
+        router.push("/dashboard")
+      } else {
+        throw new Error(data.error || "There was an error logging in")
+      }
     } catch (error) {
       console.error("Login error:", error)
 
       // Show appropriate error message
       toast({
         title: "Login failed",
-        description: error instanceof ApiError ? error.message : "There was an error logging in. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error logging in. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -84,7 +102,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <Link href="/" className="flex items-center gap-2">
               <BarChart2 className="h-6 w-6" />
-              <span className="text-xl font-bold">VisualizeAI</span>
+              <span className="text-xl font-bold">InfraAI</span>
             </Link>
           </div>
           <CardTitle className="text-2xl font-bold text-center">Login to your account</CardTitle>

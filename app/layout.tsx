@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { Toaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'InfraAI - Prompt to Infrastructure',
+  description: 'Transform your application ideas into production-ready infrastructure instantly',
 }
 
 export default function RootLayout({
@@ -14,7 +15,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
+      </body>
     </html>
   )
 }

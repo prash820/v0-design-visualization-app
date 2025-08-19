@@ -26,9 +26,14 @@ import {
   Rocket,
   ExternalLink,
   Terminal,
-  X
+  X,
+  FileCode,
+  Copy,
+  Download
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import {
   deployInfrastructure,
   getInfrastructureStatus,
@@ -375,6 +380,149 @@ export function InfrastructureDeployment({
         </CardContent>
       </Card>
 
+      {/* Infrastructure Code Display */}
+      {iacCode && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileCode className="w-5 h-5" />
+                Infrastructure Code
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(iacCode)
+                    toast({
+                      title: "Code Copied",
+                      description: "Infrastructure code copied to clipboard",
+                    })
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const blob = new Blob([iacCode], { type: 'text/plain' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'infrastructure.tf'
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                    toast({
+                      title: "File Downloaded",
+                      description: "Infrastructure code saved as infrastructure.tf",
+                    })
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </CardTitle>
+            <CardDescription>
+              Terraform configuration for your infrastructure ({iacCode.length} characters)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Code Display with Syntax Highlighting */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-900 p-2 border-b border-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-gray-300 text-sm">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="ml-2">infrastructure.tf</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    Terraform
+                  </Badge>
+                </div>
+                <div className="max-h-[500px] overflow-auto">
+                  <SyntaxHighlighter 
+                    language="hcl" 
+                    style={tomorrow}
+                    customStyle={{
+                      margin: 0,
+                      padding: '2rem',
+                      fontSize: '15px',
+                      lineHeight: '2.2',
+                      backgroundColor: '#1e1e1e',
+                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                      letterSpacing: '0.05em',
+                      wordSpacing: '0.1em'
+                    }}
+                    showLineNumbers={true}
+                    wrapLines={true}
+                    lineNumberStyle={{
+                      minWidth: '3.5em',
+                      paddingRight: '1.5em',
+                      textAlign: 'right',
+                      userSelect: 'none',
+                      color: '#6b7280',
+                      fontSize: '14px',
+                      lineHeight: '2.2'
+                    }}
+                    codeTagProps={{
+                      style: {
+                        lineHeight: '2.2',
+                        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                        fontSize: '15px',
+                        letterSpacing: '0.05em',
+                        wordSpacing: '0.1em'
+                      }
+                    }}
+                  >
+                    {iacCode}
+                  </SyntaxHighlighter>
+                </div>
+              </div>
+              
+              {/* Resource Summary */}
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium mb-2">Resources to be created:</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  {iacCode.includes('aws_lambda_function') && <div className="flex items-center gap-1">• Lambda functions</div>}
+                  {iacCode.includes('aws_api_gateway') && <div className="flex items-center gap-1">• API Gateway</div>}
+                  {iacCode.includes('aws_dynamodb') && <div className="flex items-center gap-1">• DynamoDB tables</div>}
+                  {iacCode.includes('aws_s3') && <div className="flex items-center gap-1">• S3 buckets</div>}
+                  {iacCode.includes('aws_iam') && <div className="flex items-center gap-1">• IAM roles</div>}
+                  {iacCode.includes('random_string') && <div className="flex items-center gap-1">• Random strings</div>}
+                  {iacCode.includes('aws_apigatewayv2') && <div className="flex items-center gap-1">• API Gateway v2</div>}
+                  {iacCode.includes('aws_lambda_permission') && <div className="flex items-center gap-1">• Lambda permissions</div>}
+                  {iacCode.includes('aws_cloudwatch_log_group') && <div className="flex items-center gap-1">• CloudWatch logs</div>}
+                </div>
+              </div>
+
+              {/* Code Statistics */}
+              <div className="grid grid-cols-3 gap-4 text-xs">
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="font-medium">{iacCode.split('\n').length}</div>
+                  <div className="text-muted-foreground">Lines</div>
+                </div>
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="font-medium">{iacCode.length}</div>
+                  <div className="text-muted-foreground">Characters</div>
+                </div>
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="font-medium">{iacCode.split('resource ').length - 1}</div>
+                  <div className="text-muted-foreground">Resources</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {infrastructureStatus?.deploymentStatus === 'not_deployed' && (
         <Card>
           <CardHeader>
@@ -481,6 +629,71 @@ export function InfrastructureDeployment({
           </CardContent>
         </Card>
       )}
+
+      {/* Always Available Deploy/Reprovision Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Rocket className="w-5 h-5" />
+            Deploy / Reprovision Infrastructure
+          </CardTitle>
+          <CardDescription>
+            {infrastructureStatus?.deploymentStatus === 'deployed' 
+              ? "Redeploy your infrastructure with the latest configuration"
+              : infrastructureStatus?.deploymentStatus === 'destroyed'
+              ? "Deploy your infrastructure to AWS"
+              : "Deploy your infrastructure to AWS using the generated Terraform code"
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button 
+            onClick={handleDeploy} 
+            disabled={isDeploying || !iacCode.trim()}
+            className="w-full"
+            size="lg"
+          >
+            {isDeploying ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Deploying Infrastructure...
+              </>
+            ) : (
+              <>
+                <Play className="w-5 h-5 mr-2" />
+                {infrastructureStatus?.deploymentStatus === 'deployed' 
+                  ? 'Redeploy Infrastructure'
+                  : 'Deploy Infrastructure'
+                }
+              </>
+            )}
+          </Button>
+          
+          {isDeploying && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>{deploymentStatus}</span>
+                <span>{deploymentProgress}%</span>
+              </div>
+              <Progress value={deploymentProgress} className="w-full" />
+            </div>
+          )}
+
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>
+              {infrastructureStatus?.deploymentStatus === 'deployed' 
+                ? "This will update your existing infrastructure with any changes in the configuration."
+                : "This will create all the AWS resources defined in your Terraform configuration."
+              }
+            </p>
+            {!iacCode.trim() && (
+              <p className="text-orange-600 font-medium">
+                ⚠️ No infrastructure code available. Please generate infrastructure code first.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 

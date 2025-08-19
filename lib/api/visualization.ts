@@ -956,12 +956,12 @@ export const generateIaC = async (
   }
 };
 
-export const getIaCJobStatus = async (jobId: string): Promise<any> => {
+export const getInfrastructureJobStatus = async (jobId: string): Promise<any> => {
   try {
     return await apiClient.get<any>(`${API_ENDPOINTS.GENERATE.IAC}/status/${jobId}`);
   } catch (error) {
-    console.error("Error getting IaC job status:", error);
-    throw error instanceof ApiError ? error : new ApiError("Failed to get IaC job status", 500);
+    console.error("Error getting infrastructure job status:", error);
+    throw error instanceof ApiError ? error : new ApiError("Failed to get infrastructure job status", 500);
   }
 };
 

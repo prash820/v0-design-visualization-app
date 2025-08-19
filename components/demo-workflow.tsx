@@ -427,7 +427,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Heart, Star } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { Product } from '@/types/product';
 
 interface ProductCardProps {

@@ -76,6 +76,7 @@ function isValidMermaidSyntax(chart: string): boolean {
     "quadrantChart",
     "C4Context", // Allow C4 context diagrams
     "erDiagram", // Allow entity relationship diagrams
+    "architecture-beta", // Allow architecture diagrams
   ]
 
   const hasValidStarter = validStarters.some((starter) => trimmed.toLowerCase().startsWith(starter.toLowerCase()))

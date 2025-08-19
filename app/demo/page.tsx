@@ -1,110 +1,294 @@
 "use client"
 
-import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, ArrowRight } from "lucide-react"
-import DemoWorkflow from "@/components/demo-workflow"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Cloud, 
+  Server, 
+  Database, 
+  Code2, 
+  Zap, 
+  CheckCircle, 
+  Clock, 
+  AlertCircle,
+  Play,
+  Brain,
+  Globe,
+  Shield,
+  DollarSign,
+  ArrowRight
+} from "lucide-react"
+
+const examples = [
+  {
+    title: "E-commerce Platform",
+    description: "Full-stack e-commerce with React frontend, Node.js API, PostgreSQL database, and Redis cache",
+    prompt: "I need an e-commerce platform with user authentication, product catalog, shopping cart, payment processing (Stripe), order management, and admin dashboard. The app should be scalable and secure.",
+    features: ["React Frontend", "Node.js API", "PostgreSQL", "Redis Cache", "Stripe Payments", "Admin Dashboard"],
+    estimatedCost: "$150-300/month"
+  },
+  {
+    title: "Blog Platform",
+    description: "Modern blog with content management, user authentication, and SEO optimization",
+    prompt: "Create a blog platform with user authentication, content management system, SEO optimization, comment system, and analytics dashboard. Support for markdown content and image uploads.",
+    features: ["Next.js Frontend", "Node.js API", "PostgreSQL", "S3 Storage", "CDN", "Analytics"],
+    estimatedCost: "$50-100/month"
+  },
+  {
+    title: "SaaS Application",
+    description: "Multi-tenant SaaS platform with subscription management and analytics",
+    prompt: "Build a SaaS application with multi-tenant architecture, user authentication, subscription management (Stripe), analytics dashboard, and API rate limiting. Include automated backups and monitoring.",
+    features: ["React Frontend", "Node.js API", "PostgreSQL", "Redis", "Stripe Subscriptions", "Monitoring"],
+    estimatedCost: "$200-500/month"
+  },
+  {
+    title: "API Gateway",
+    description: "Microservices API gateway with authentication, rate limiting, and monitoring",
+    prompt: "Create an API gateway for microservices with authentication, rate limiting, request/response transformation, logging, monitoring, and load balancing. Support for multiple backend services.",
+    features: ["API Gateway", "Lambda Functions", "DynamoDB", "CloudWatch", "Load Balancer", "VPC"],
+    estimatedCost: "$100-250/month"
+  }
+]
+
+const workflowSteps = [
+  {
+    step: "01",
+    title: "Describe Your Architecture",
+    description: "Tell us about your application in plain English",
+    icon: Brain,
+    color: "text-blue-600"
+  },
+  {
+    step: "02",
+    title: "AI Analysis & UML Generation",
+    description: "AI analyzes your requirements and generates architecture diagrams",
+    icon: Database,
+    color: "text-green-600"
+  },
+  {
+    step: "03",
+    title: "Terraform Code Generation",
+    description: "Production-ready Terraform code with AWS best practices",
+    icon: Code2,
+    color: "text-purple-600"
+  },
+  {
+    step: "04",
+    title: "One-Click Deployment",
+    description: "Deploy directly to AWS with real-time monitoring",
+    icon: Server,
+    color: "text-orange-600"
+  }
+]
 
 export default function DemoPage() {
-  return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Futuristic Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.03)_1px,transparent_1px)] bg-[size:50px_50px]" />
+  const [selectedExample, setSelectedExample] = useState(0)
 
-      {/* Animated Particles */}
-      <div className="absolute inset-0">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-primary rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-            }}
-          />
-        ))}
+  return (
+    <div className="container mx-auto p-6 space-y-12">
+      {/* Hero Section */}
+      <div className="text-center space-y-6">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium">
+          <Play className="h-4 w-4" />
+          <span>Live Demo</span>
+        </div>
+        
+        <h1 className="text-4xl md:text-6xl font-bold">
+          See Infrastructure Automation in Action
+        </h1>
+        
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          Watch how InfraAI transforms your application ideas into production-ready infrastructure in minutes
+        </p>
       </div>
 
-      {/* Header */}
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container flex h-16 items-center justify-between px-4 md:px-6">
-          <Link href="/" className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors group">
-            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium text-foreground">Back to Home</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              VisualizeAI Demo
-            </div>
-          </div>
-          <Link href="/register">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground glow-cyan transition-all duration-300 hover:scale-105">
-              Get Started
-            </Button>
-          </Link>
+      {/* Workflow Section */}
+      <section className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+          <p className="text-muted-foreground">From idea to infrastructure in 4 simple steps</p>
         </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="py-12 text-center relative z-10">
-        <div className="container px-4 md:px-6">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            See VisualizeAI in Action
-          </h1>
-          <p className="text-xl text-foreground/80 max-w-3xl mx-auto mb-8 leading-relaxed">
-            Watch how we transform a simple idea into a complete, production-ready application in just minutes. This
-            interactive demo shows the entire AI-powered development workflow.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <div className="flex items-center gap-2 text-sm text-primary bg-card/50 px-4 py-2 rounded-full border border-primary/30">
-              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-              Interactive Demo • Click to control
-            </div>
-          </div>
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          {workflowSteps.map((step, index) => (
+            <Card key={index} className="text-center">
+              <CardHeader>
+                <div className={`w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4`}>
+                  <step.icon className={`h-8 w-8 ${step.color}`} />
+                </div>
+                <CardTitle className="text-lg">{step.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
-      {/* Demo Workflow */}
-      <section className="pb-12 relative z-10">
-        <div className="container px-4 md:px-6">
-          <DemoWorkflow />
+      {/* Examples Section */}
+      <section className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold mb-4">Example Architectures</h2>
+          <p className="text-muted-foreground">See what InfraAI can build for you</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {examples.map((example, index) => (
+            <Card 
+              key={index} 
+              className={`cursor-pointer transition-all hover:shadow-lg ${
+                selectedExample === index ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setSelectedExample(index)}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{example.title}</CardTitle>
+                  <Badge variant="outline">{example.estimatedCost}</Badge>
+                </div>
+                <CardDescription>{example.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {example.features.map((feature, featureIndex) => (
+                    <Badge key={featureIndex} variant="secondary" className="text-xs">
+                      {feature}
+                    </Badge>
+                  ))}
+                </div>
+                
+                {selectedExample === index && (
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">Example Prompt:</div>
+                    <div className="bg-muted p-3 rounded-md text-sm">
+                      "{example.prompt}"
+                    </div>
+                    <Button className="w-full">
+                      <Zap className="mr-2 h-4 w-4" />
+                      Try This Example
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold mb-4">Why Choose InfraAI?</h2>
+          <p className="text-muted-foreground">The advantages of AI-powered infrastructure automation</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4">
+                <Clock className="h-6 w-6 text-green-600" />
+              </div>
+              <CardTitle>Save Time</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Generate production-ready infrastructure in minutes instead of days or weeks
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4">
+                <Shield className="h-6 w-6 text-blue-600" />
+              </div>
+              <CardTitle>Security First</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Built-in security best practices and compliance with AWS Well-Architected Framework
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
+                <DollarSign className="h-6 w-6 text-purple-600" />
+              </div>
+              <CardTitle>Cost Optimized</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Get upfront cost estimates and optimize your infrastructure for cost and performance
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-4">
+                <Globe className="h-6 w-6 text-orange-600" />
+              </div>
+              <CardTitle>AWS Best Practices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Follow AWS Well-Architected Framework with reliability, performance, and scalability
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
+                <Code2 className="h-6 w-6 text-red-600" />
+              </div>
+              <CardTitle>Production Ready</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Generate Terraform code that's ready for production deployment with proper monitoring
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-4">
+                <Brain className="h-6 w-6 text-indigo-600" />
+              </div>
+              <CardTitle>AI Powered</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Advanced AI analyzes your requirements and generates optimal architecture
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-card/50 via-card/30 to-card/50 text-foreground relative overflow-hidden">
-        {/* Holographic Effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-secondary/10 animate-pulse" />
-
-        <div className="container px-4 md:px-6 text-center relative z-10">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Ready to Build Your Next Project?
-          </h2>
-          <p className="text-xl text-foreground/80 mb-8 max-w-2xl mx-auto">
-            Join thousands of developers who are already using VisualizeAI to accelerate their development workflow.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
-              <Button
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold glow-cyan transition-all duration-300 hover:scale-105"
-              >
-                Start Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/pricing">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
-              >
-                View Pricing
-              </Button>
-            </Link>
-          </div>
+      <section className="text-center space-y-6 py-12 bg-primary/5 rounded-2xl">
+        <h2 className="text-3xl font-bold">Ready to Get Started?</h2>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          Join thousands of developers who are deploying infrastructure faster than ever before
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button size="lg" className="bg-primary hover:bg-primary/90">
+            <Cloud className="mr-2 h-5 w-5" />
+            Start Building Now
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          <Button size="lg" variant="outline">
+            <Play className="mr-2 h-5 w-5" />
+            Watch Full Demo
+          </Button>
         </div>
       </section>
     </div>

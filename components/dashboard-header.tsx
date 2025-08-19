@@ -66,6 +66,9 @@ export default function DashboardHeader({ title }: DashboardHeaderProps) {
           <Link href="/dashboard" className="text-sm font-medium hover:underline underline-offset-4">
             Dashboard
           </Link>
+          <Link href="/database" className="text-sm font-medium hover:underline underline-offset-4">
+            Database
+          </Link>
         </nav>
         <div className="flex items-center gap-4">
           <DropdownMenu>
@@ -80,6 +83,9 @@ export default function DashboardHeader({ title }: DashboardHeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/dashboard">Dashboard</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/database">Database</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/settings">Settings</Link>
